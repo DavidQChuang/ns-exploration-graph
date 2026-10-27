@@ -56,3 +56,9 @@
 - reviewer (agent 35e7e671) finished read-only at 0fca81f. No edits. It confirmed scoped reads, UpdateRequest, projection budgets, invalidation, stale_execution, cycles, restore atomicity, identity binding, and replay. It did not rerun the suite.
 - Two medium findings are assigned to review_fixes (agent 1941b273): MCP marks a generated-identity storage failure retryable, and snapshot import treats wall-clock order as an invariant. Three low items go with that lane: ProposeWork returns stale_evidence for a non-evidence parent; cross-namespace CreateGraph stays permission_denied by decision; the 64 KiB cap is documented as the toolkit envelope, not the duplicated MCP frame.
 - Release-checklist boxes stay unchecked.
+
+## 2026-10-27 — review fixes verified
+
+- review_fixes (agent 1941b273) implemented the five resolutions. Root confirmed the extra rule in decision 009: a cited reference-only observation must list at least one resource pinned to that revision, and later attachments stay optional. That keeps the existing "acceptance resource omission" rejection without using the clock. Inline-evidence observations may omit resources; that is the accepted weakening versus the old timestamp set-equality check.
+- Root reran `go vet ./...` and `go test -count=1 ./...` with PostgreSQL and Python required. Every package passed. Race detector was not run.
+- Commit follows this entry. Independent review findings are resolved. Release-checklist audit is next. G5 remains open: no GitHub Actions run and no clean-machine install.
