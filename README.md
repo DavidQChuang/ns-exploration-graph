@@ -1,142 +1,60 @@
 # ns-exploration-graph
 
-A durable "exploration graph" library for agent harnesses, written in Go. It stores an investigation as typed, revisioned nodes (origin, goals, work items, observations, conclusions, hints) with typed edges, resource references and goal acceptances. A shared command service enforces the rules; two storage adapters persist it (in-memory reference store and PostgreSQL). Eight narrow, schema-validated tools expose it to models, in-process or over MCP stdio.
+Durable exploration memory for agent harnesses. **ns** stands for **North Star**.
 
-Status: approved local source release 0.2.0. Tool contract 0.2 is approved (`"status": "approved"` in `spec/tool-contracts.json`); snapshot schema version 1 is the only supported version. Runtime verification passed for `62c083f`; source delivery was approved after preflight inspection at `9da1e0b`. The final documentation commit will be tagged locally as `v0.2.0`; root will regenerate and recheck the distributable archives and detached checksums from that commit. Nothing has been published. See `docs/RELEASE-SIGNOFF.md` for approval and artifact details.
+Keep goals, proposed work, observations, conclusions and the evidence behind decisions in a shared, revisioned graph. Agents use eight schema-validated tools; a host can embed the Go library or expose those tools through a stdio MCP server. Memory and PostgreSQL stores share the same command service.
 
-## What it is not
+The host runs models, schedules workers, authenticates callers and resolves evidence. The graph records provenance, enforces work and revision rules, and tracks which evidence a goal acceptance reviewed.
 
-It does not run models, schedule or launch workers, fetch or authorize evidence, authenticate callers, serve remote clients, or provide a viewer. The embedded library is a trusted-host boundary. A generic MCP client without durable invocation identity gets no reconnect-retry guarantee (see below). No ARTEX/Norma code or service is used.
+## Try the workflow
 
-## Layout
+Use a patched Go toolchain. The module declares `go 1.25.0`; release verification exercised Go 1.25.0 for compatibility and Go 1.27.3 for the patched compiler lane.
 
-| Path | Purpose |
-|---|---|
-| `graph/` | Semantic command service, reads/projection, snapshots; `graph/store/memory`, `graph/store/postgres` (+ migration) |
-| `toolkit/` | The eight tools: embedded contracts (`contracts.json`), strict validation, role/capability binding, prompt assets |
-| `adapters/mcp/` | MCP server over the official Go SDK |
-| `cmd/graph-mcp/` | Stdio MCP server bound to one graph, actor and role (PostgreSQL) |
-| `examples/scripted/` | Deterministic no-model scenario (direct, in-process MCP) and a host control CLI |
-| `examples/python/` | Second consumer: Python standard-library MCP client for the same scenario |
-| `spec/` | SPEC, TOOLS, development plan, JSON contracts and SQL |
-
-## Install and build
-
-Requirements: Go (module minimum `go 1.25.0` in `go.mod`) and, for the PostgreSQL store and `graph-mcp`, a reachable PostgreSQL server.
+From the repository root, run the deterministic in-memory example:
 
 ```sh
-go build ./...
-go build -o bin/graph-mcp ./cmd/graph-mcp
+go run ./examples/scripted -transport direct
 ```
 
-The module path is `ns-exploration-graph`. The local 0.2.0 release is source-only: it does not include Go or PostgreSQL runtimes, built executables, or dependency binaries. No package-registry or other publication has occurred.
+It records a parser-input failure, resumes from graph state, verifies corrected input and accepts a goal. The result has 14 events, two completed work items and a met goal. This example needs neither PostgreSQL nor a model.
 
-## Quick start (in process)
-
-`toolkit/example_test.go` is a compiled, tested version of this flow: create a graph through the host API, bind an adapter to it, and call a tool with a host-persisted invocation identity.
-
-```go
-svc := graph.NewService(store) // memory.New(), or a *postgres.Store after Migrate
-svc.CreateGraph(ctx, graph.CommandContext{Namespace: ns, GraphID: id, ActorID: actor, RequestID: requestID},
-	graph.CreateGraphInput{Title: "Parser investigation", Request: "Verify the parser rejects malformed input."})
-tools, err := toolkit.New(svc, toolkit.Config{Binding: toolkit.Binding{Namespace: ns, GraphID: id, ActorID: actor, Role: "planner"}})
-out := tools.Invoke(ctx, "graph_propose_work", argsJSON, hostInvocationID) // toolkit.Envelope
-```
-
-Run the end-to-end scripted scenario (no model involved):
+Run the same workflow through an in-process MCP client/server:
 
 ```sh
-go run ./examples/scripted -transport direct   # or: -transport mcp (in-process MCP client/server)
+go run ./examples/scripted -transport mcp
 ```
 
-`docs/INTEGRATION.md` covers the minimal host integration in full.
+For a Go host, continue with the [Go library guide](docs/02-go-library.md). For an agent client, start with [Agent integrations](docs/01-agents.md) and the [MCP guide](docs/03-mcp.md). The stdio binary uses PostgreSQL and an existing graph; its setup is separate from this memory example.
 
-## Stdio MCP server
+## Documentation
 
-`graph-mcp` serves one pre-existing graph for one actor and role over stdio. It does not create graphs and does not migrate the database: apply `graph/store/postgres/migrations/001_initial.sql` (or call `postgres.Store.Migrate`) and create the graph through the host API first.
+The [documentation index](docs/README.md) provides task-based reading paths.
 
-```sh
-export EXPLORATION_DATABASE_URL='postgres://user:pass@host:5432/db?sslmode=...'
-./bin/graph-mcp -namespace NS -graph GRAPH_UUID -actor ACTOR -role planner
-```
+- [Agent integrations](docs/01-agents.md): connect a harness and bind planner, worker or solo sessions.
+- [Go library](docs/02-go-library.md): build a host with runnable examples and PostgreSQL setup.
+- [MCP](docs/03-mcp.md): configure the stdio process and use its eight tools.
+- [Exploration workflow](docs/04-workflow.md): follow work, evidence, acceptance and revision handling.
+- [Architecture](docs/05-architecture.md): components, graph semantics and trust boundaries.
+- [Storage](docs/06-storage.md): persistence, events, concurrency and portable snapshots.
+- [Operations](docs/07-operations.md): limits, verification, recovery and troubleshooting.
+- [Roadmap](docs/08-roadmap.md): current capabilities, known limits and possible next steps.
 
-| Flag | Meaning |
-|---|---|
-| `-namespace`, `-graph`, `-actor` | Required trusted binding (graph must exist) |
-| `-role` | `planner` (default), `worker`, or `solo` |
-| `-work`, `-execution` | Both together: host-assigned running work and its execution UUID (required for worker writes) |
-| `-acceptance` | `human`, `validator` or `agent`: grants `graph_accept_goal`. Off by default. The process-level flag is the only policy this binary has; embed the library for per-request acceptance policy |
+Specifications, architecture decisions, release evidence and contributor resources are linked from the [maintainer index](docs/maintainers/README.md).
 
-Configuration errors exit non-zero without echoing the connection string. When the client closes stdin the server exits 0.
+## Release and compatibility
 
-## Tools, roles and acceptance
+Local source release **0.2.0** is tagged `v0.2.0`. Tool contract **0.2** is approved; snapshot schema **1** is the only supported format. The module path is `ns-exploration-graph`; it is distributed as local source and has not been published to a registry or remote repository.
 
-Eight tools: `graph_overview`, `graph_get_node`, `graph_list_nodes`, `graph_propose_work`, `graph_record_observation`, `graph_record_conclusion`, `graph_add_support`, `graph_accept_goal`. Inputs and result envelopes are defined by `spec/tool-contracts.json` (embedded copy `toolkit/contracts.json`; regenerate with `python toolkit/generate_contracts.py`, verify with `--check`). Schemas reject unknown fields.
+- Go module minimum: `go 1.25.0`; tested with Go 1.25.0 and 1.27.3.
+- PostgreSQL: tested 17.11; the verification workflow pins its container image by digest.
+- MCP SDK: `github.com/modelcontextprotocol/go-sdk` v1.8.0.
+- MCP protocol: SDK client negotiation uses `2026-07-28`; the raw compatibility client uses `2025-11-25`.
+- JSON Schema: 2020-12, with shared runtime format assertions and versioned input/output contracts.
 
-| Role | Tools |
-|---|---|
-| planner | overview, get_node, list_nodes, propose_work, record_conclusion, add_support |
-| worker | overview, get_node, list_nodes, record_observation, record_conclusion |
-| solo | planner and worker tools together |
+Both clean compiler lanes recorded 195 passing test/subtests, zero failures and zero skipped tests, with the race detector, PostgreSQL and Python required. The stdio Python consumer and direct/MCP examples agreed. The [release artifact record](docs/RELEASE-ARTIFACTS.md) identifies the tested runtime, immutable source tag and detached checksums; current documentation updates on `main` do not move that tag. Hosted GitHub Actions has not run.
 
-`graph_accept_goal` is never part of a preset; the host grants it with an acceptance method and a policy callback. Discovery lists only granted tools, but authorization runs on every invocation, so a directly called hidden tool returns `permission_denied`. Actor, graph, namespace, producer work item and execution are host binding, never tool arguments.
-
-## Execution binding
-
-A worker session is bound to a work item and an execution ID the host created by moving the work to `running`. Observation writes require that binding and attach the observation to the bound work item. If the host stops or reassigns the work, or completes it, that execution is fenced: later writes return `stale_execution` and the worker must stop. The host, not the worker, completes work and chooses what happens next.
-
-## Invocation and retry behavior
-
-- Every mutating call needs a host-persisted invocation identity (at most 200 characters). The adapter scopes it to graph and actor and derives the service request key; the same identity with the same arguments returns exactly the original success envelope, including its original graph revision, even after later writes or after the graph is closed. The same identity with different arguments returns `idempotency_conflict`. A different identity is a new operation even with identical arguments (no semantic de-duplication).
-- Authorization and role checks run again on every retry.
-- Only `storage_unavailable` is marked retryable, and only with the same identity.
-- `graph-mcp` has no durable invocation identity: each call gets a fresh random identity. If a response is lost the outcome is ambiguous, and a blind retry creates a second operation. Clients must read the graph (`graph_list_nodes` / `graph_get_node`) to reconcile before writing again. Embedding hosts can supply `adapters/mcp.Options.ResolveInvocation` to map requests to identities they persisted; never derive the identity from model-controlled `_meta` or the JSON-RPC request ID.
-
-## Evidence resolver responsibility
-
-The graph stores inline evidence text plus resource references (type, URI, optional external revision and SHA-256). It does not fetch, authorize, hash-check or interpret what a URI points to. The host decides how a reference resolves, whether the reader may open it, and whether the content matches. A support edge records a claim about evidence; it does not verify it. Acceptance records the reviewed closure; the human or validator doing the review is outside the library.
-
-## Limits
-
-| Limit | Default | Where |
-|---|---|---|
-| Tool input | 256 KiB UTF-8 | `toolkit.Limits.InputBytes` |
-| Tool result / mutation result | 64 KiB; adapter value must equal the service's | `toolkit.Limits.ResultBytes`, `graph.Limits.ResultBytes` |
-| Overview budget | default 16 KiB; `byte_budget` 1024-65536 | `toolkit.Limits.OverviewBytes`, tool schema |
-| `graph_list_nodes` `limit` | default 20, max 100 | `graph` |
-| References per command (parents, supports, resources, acceptance edges) | 100 | schema, `graph.Limits.MaxReferences` |
-| Invocation identity | 200 characters | `toolkit` |
-| Snapshot import/export | 64 MiB | `graph.Limits.SnapshotBytes` (host API) |
-
-Over-limit input fails before any write. Boundary behavior is covered by tests in `toolkit/`. The result cap measures the structured envelope; the MCP frame also carries it as text and is larger (see DECISIONS 008).
-
-## Versions
-
-| Component | Version | Evidence |
-|---|---|---|
-| Go | module minimum 1.25.0; candidate verified with Go 1.25.0 and 1.27.3 | `go.mod`, `docs/CLEAN-ENVIRONMENT.md` |
-| PostgreSQL | tested against 17.11 (portable runtime); CI uses the `postgres:17` image | `docs/POSTGRES-VERIFICATION.md`, `.github/workflows/test.yml` |
-| MCP Go SDK | `github.com/modelcontextprotocol/go-sdk` v1.8.0 | `go.mod` |
-| MCP protocol | Go SDK client negotiates `2026-07-28`; a raw client requesting `2025-11-25` (or any other version) is answered `2025-11-25` | `cmd/graph-mcp/stdio_test.go`, `examples/python/parser_scenario.py` |
-| JSON Schema | 2020-12, validated with `santhosh-tekuri/jsonschema/v6` v6.0.3 with format assertions (uuid, uri, date-time) | `toolkit/contracts.go` |
-| Contract | tool contracts 0.2 (approved); prompt assets version 1; snapshot schema version 1 (only supported version) | `spec/`, `toolkit/prompts` |
-
-## Testing
-
-```sh
-export GRAPH_TEST_DATABASE_URL='postgres://postgres@127.0.0.1:5432/exploration_graph_test?sslmode=disable'
-export GRAPH_REQUIRE_POSTGRES=1   # fail, do not skip, without a database
-export GRAPH_REQUIRE_PYTHON=1     # fail, do not skip, without Python 3
-go vet ./... && go test -count=1 ./...
-python toolkit/generate_contracts.py --check
-```
-
-The stdio tests build `cmd/graph-mcp` and run it as a subprocess; the Python consumer test needs Python 3.8+ (standard library only). Corrected source `62c083f422be2f25e538724179c9fa142bd17e91` passed the clean matrix on Go 1.25.0 and 1.27.3: each run recorded 195 test/subtest passes, zero failures and zero skips across seven test-bearing packages, with native CGO, fresh PostgreSQL 17.11 and Python 3.12. Direct, in-process MCP and Python reports agreed on 14 events, 8 nodes, 2 work items, 4 evidence nodes and 2 resources. The patched Go 1.27.3 vulnerability scan found zero affecting vulnerabilities and zero findings in imported packages, plus one finding in an uncalled required module. The 1.25.0 failure at prior candidate `ba4769a` and its correction are retained in `docs/CLEAN-ENVIRONMENT.md`. Hosted GitHub Actions has not run. See `docs/CLEAN-ENVIRONMENT.md`, `docs/RELEASE-NOTES.md` and `docs/RELEASE-SIGNOFF.md`.
-
-## Second consumer (Python, no Go API)
-
-`examples/python/parser_scenario.py` completes the parser-failure scenario against the compiled `graph-mcp` over stdio and prints the normalized final state; see `examples/python/README.md`.
+Read [Operations](docs/07-operations.md) before deploying or verifying a host. Graph writes are idempotent only when the host preserves invocation identities; a stock MCP client must reconcile ambiguous writes. Graph size affects read and mutation costs. Authorization, external effects and evidence retrieval remain host responsibilities.
 
 ## License
 
-Apache-2.0; see `LICENSE` and `NOTICE`.
+Apache-2.0. See [LICENSE](LICENSE), [NOTICE](NOTICE) and the [dependency inventory](docs/DEPENDENCIES.md).

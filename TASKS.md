@@ -13,3 +13,13 @@ Status: complete. Delivered local source release0.2.0 for the complete portable-
 - [x] Final requirements-to-evidence audit and clean committed delivery. Local tagv0.2.0/source7521239 identifies the immutable89-file source delivery; repository main retains the post-archive attestation.
 
 Current state: complete; no implementation or verification jobs remain. ZIP/TAR.GZ, detached per-file manifest and SHA256SUMS are under .local/releases/0.2.0/. Runtime/contract/prompt/CI content is unchanged from tested62c083f; source-tag differences are documentation only. The durable goal is complete and its recovery heartbeat was deleted. Further work requires a new user request.
+
+## Post-release documentation refresh
+
+- [x] Inspect the requested zvec-grep reference and present an outline before writing.
+- [x] Add the documentation index and eight task-oriented numbered guides with shared navigation.
+- [x] Shorten the project README; route historical/specification/audit records through a maintainer index without moving them.
+- [x] Preserve legacy INTEGRATION.md links and documentation assertions.
+- [x] Check204local links/anchors, navigation consistency and balanced fences; execute the complete memory quickstart inside the checkout and from a separate consumer module.
+- [x] Compile the PostgreSQL replacement, validate eight tool inputs plus two result examples, run existing documentation/example assertions and verify schema-generator equality.
+- [x] Commit the documentation-only refresh on main. Immutable v0.2.0 tag/archives and runtime source are unchanged.
