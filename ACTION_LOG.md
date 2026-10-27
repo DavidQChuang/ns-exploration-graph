@@ -69,3 +69,9 @@
 - release_audit (agent 09a0b571) filled docs/RELEASE-CHECKLIST.md and five REQUIREMENTS rows. It reran `go test -count=1 -v ./...` (113 PASS, 0 SKIP) and govulncheck v1.9.0 at f094f14 (no reachable vulnerabilities). Root committed that evidence without widening any VERIFIED box.
 - Behavior for the open G2 cases already exists in the service: invalidate skips unrelated acceptances, ReviseNode moves a met goal to needs_review, and AddDependency refuses work that is not open while TransitionWork rechecks prerequisites under the lock. Tests for those cases, for a cyclic snapshot, and for a compatibility note are the next lane. Environmental gates stay open: no remote, no race detector, no clean machine.
 - Started gap_tests (agent 9c210d16) for those tests plus docs/COMPATIBILITY.md and a draft docs/RELEASE-NOTES.md. It must not mark the release ready.
+
+## 2026-10-27 — gap tests verified
+
+- gap_tests (agent 9c210d16) added the five conformance subtests, docs/COMPATIBILITY.md, and draft docs/RELEASE-NOTES.md. On PostgreSQL the claim/dependency race produced both orders (claim 3, dependency 22 of 25). The memory store mutex serialized it, so only the dependency-first order appeared there. The author checked the tests fail when the production checks are removed, in a throwaway copy.
+- Root reran `go test -count=1 -run TestMemoryConformance|TestPostgresConformance ./graph ./graph/store/postgres` with PostgreSQL required: both packages passed.
+- Root then marked the concurrency, freshness, snapshot, compatibility, and release-notes checklist rows verified, and M1-09. Still open: GitHub Actions, race detector, clean install, Go 1.25 build, license scan, contract approval (still proposed), release archive, and root sign-off. Not a release.
