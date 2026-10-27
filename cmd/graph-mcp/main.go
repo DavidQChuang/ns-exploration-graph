@@ -27,6 +27,7 @@ func run() error {
 	role := flag.String("role", "planner", "planner, worker, or solo")
 	work := flag.String("work", "", "host-assigned work UUID")
 	execution := flag.String("execution", "", "host-issued execution UUID")
+	acceptance := flag.String("acceptance", "", "grant graph_accept_goal with this method (human, validator or agent); off by default")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		return fmt.Errorf("unexpected positional arguments")
@@ -50,7 +51,14 @@ func run() error {
 		}
 		b.Execution = &graph.Execution{WorkItemID: *work, ExecutionID: *execution}
 	}
-	a, e := toolkit.New(svc, toolkit.Config{Binding: b})
+	cfg := toolkit.Config{Binding: b}
+	if *acceptance != "" {
+		// Launching the process with this flag is the host's explicit grant. The stdio
+		// binary has no per-request policy; embed the library for that.
+		cfg.Binding.AcceptGoal, cfg.Binding.AcceptanceMethod = true, *acceptance
+		cfg.AcceptancePolicy = func(context.Context, toolkit.Binding, graph.AcceptGoalInput) error { return nil }
+	}
+	a, e := toolkit.New(svc, cfg)
 	if e != nil {
 		return e
 	}

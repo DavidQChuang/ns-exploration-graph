@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sort"
 	"strconv"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -81,11 +80,17 @@ func invoke(s session, name string, args any, id string) (map[string]any, error)
 	return data, e
 }
 
+// Report is the normalized comparison form of a finished scenario: generated IDs and
+// timestamps are replaced by titles, states and counts, so independent runs (direct,
+// in-process MCP, stdio subprocess, Python consumer) can be compared for equality.
 type Report struct {
 	GraphRevision     int64    `json:"graph_revision"`
 	GoalState         string   `json:"goal_state"`
 	Nodes             []string `json:"nodes"`
+	Lifecycle         []string `json:"lifecycle"`
 	Relations         []string `json:"relations"`
+	Events            []string `json:"events"`
+	Acceptances       []string `json:"acceptances"`
 	ReviewedEvidence  int      `json:"reviewed_evidence"`
 	ReviewedResources int      `json:"reviewed_resources"`
 	ResumedFromGraph  bool     `json:"resumed_from_graph"`
@@ -228,27 +233,24 @@ func resume(ctx context.Context, mode string, svc *graph.Service, b toolkit.Bind
 	if e != nil {
 		return Report{}, e
 	}
-	snapshot, e := svc.Snapshot(ctx, b.Namespace, b.GraphID)
+	report, e := buildReport(ctx, svc, b.Namespace, b.GraphID)
 	if e != nil {
 		return Report{}, e
 	}
-	report := Report{GraphRevision: snapshot.Graph.Revision, ResumedFromGraph: true, ReviewedEvidence: len(accepted["reviewed_evidence"].([]any)), ReviewedResources: len(accepted["reviewed_resource_ids"].([]any))}
-	titles := map[string]string{}
-	for _, n := range snapshot.Nodes {
-		titles[n.ID] = n.Current().Title
-		report.Nodes = append(report.Nodes, n.Kind+":"+n.Current().Title+":"+n.Current().State)
-		if n.Kind == "goal" {
-			report.GoalState = n.Current().State
-		}
+	if report.ReviewedEvidence != len(accepted["reviewed_evidence"].([]any)) || report.ReviewedResources != len(accepted["reviewed_resource_ids"].([]any)) {
+		return Report{}, fmt.Errorf("acceptance response disagrees with persisted closure")
 	}
-	for _, ed := range snapshot.Edges {
-		report.Relations = append(report.Relations, ed.Relation+":"+titles[ed.SourceID]+"→"+titles[ed.TargetID])
-	}
-	sort.Strings(report.Nodes)
-	sort.Strings(report.Relations)
+	report.ResumedFromGraph = true
 	return report, nil
 }
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "host" {
+		if e := hostMain(context.Background(), os.Args[2:], os.Stdout); e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+		return
+	}
 	mode := flag.String("transport", "direct", "direct or mcp")
 	flag.Parse()
 	out, e := run(context.Background(), *mode)
