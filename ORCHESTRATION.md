@@ -6,10 +6,12 @@ Root role: coordinator, integrator, release auditor, and Git committer. Implemen
 
 ## Active assignments
 
-- `/root/core_lead` — gpt-6-astra / high; owns Go domain contracts, semantic service, memory store, projection/restore, core tests, and docs/DECISIONS.md.
-- `/root/storage_infra` — gpt-6.1-sol / high; owns local toolchain provisioning, PostgreSQL adapter/migrations, DB tests, scripts, and CI.
-- `/root/toolkit_mcp` — gpt-6.1-sol / high; owns toolkit/, adapters/mcp/, cmd/, examples/, prompt assets, README.md, docs/INTEGRATION.md, and transport conformance tests. Coordinates interfaces/dependencies with core/storage.
-- Completed `/root/requirements_docs` — gpt-6-luna / high; delivered docs/REQUIREMENTS.md, docs/RELEASE-CHECKLIST.md, LICENSE, and NOTICE. Verification status deliberately remains NOT VERIFIED until runtime evidence is recorded.
+Orchestrator handoff on 2026-10-27: Cursor agent (Claude) replaced the stopped Codex session. Earlier Codex agents are not running.
+
+- `core_perf` (agent bd7b6b3f) — claude-opus-5-5-medium; owns graph/**, bounded-read performance, G3 projection/cursor/restore tests, docs/DECISIONS.md (append) and docs/POSTGRES-VERIFICATION.md.
+- `toolkit_mcp` (agent 5f884d15) — claude-sonnet-5-5-high; owns toolkit/, adapters/mcp/, cmd/, examples/, result schemas in spec/, README.md, docs/INTEGRATION.md, .github/workflows/test.yml.
+- Completed (previous session) `requirements_docs` — delivered docs/REQUIREMENTS.md, docs/RELEASE-CHECKLIST.md, LICENSE, NOTICE. Verification status remains NOT VERIFIED until runtime evidence is recorded.
+- Planned after both lanes finish: independent reviewer (correctness/security) and release-audit lane to fill docs/RELEASE-CHECKLIST.md evidence.
 
 All agents share the checkout. Root stages named paths only and records commits at coherent boundaries. No agent may overwrite another lane's work or silently change the public contract.
 
