@@ -68,3 +68,4 @@
 
 - release_audit (agent 09a0b571) filled docs/RELEASE-CHECKLIST.md and five REQUIREMENTS rows. It reran `go test -count=1 -v ./...` (113 PASS, 0 SKIP) and govulncheck v1.9.0 at f094f14 (no reachable vulnerabilities). Root committed that evidence without widening any VERIFIED box.
 - Behavior for the open G2 cases already exists in the service: invalidate skips unrelated acceptances, ReviseNode moves a met goal to needs_review, and AddDependency refuses work that is not open while TransitionWork rechecks prerequisites under the lock. Tests for those cases, for a cyclic snapshot, and for a compatibility note are the next lane. Environmental gates stay open: no remote, no race detector, no clean machine.
+- Started gap_tests (agent 9c210d16) for those tests plus docs/COMPATIBILITY.md and a draft docs/RELEASE-NOTES.md. It must not mark the release ready.
