@@ -70,7 +70,8 @@ func storageError(e error) error {
 	if errors.As(e, &ge) {
 		return e
 	}
-	return graph.Err("storage_unavailable", e.Error())
+	// SPEC: error text never includes SQL or credentials. Driver detail stays out of the returned error.
+	return graph.Err("storage_unavailable", "Graph service is unavailable.")
 }
 func (s *Store) checkpoint(name string) error {
 	if s.fault != nil {

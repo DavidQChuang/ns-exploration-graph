@@ -28,3 +28,11 @@ Two optional, additive store extensions are defined in `graph/types.go`; the `St
 - `RequestUpdater.UpdateRequest(..., requestID, fn)` behaves like `Update`, except that `State.Events` contains only the committed event with that request ID. Idempotency replay/conflict checks are unchanged. PostgreSQL resolves the event through the existing `(graph_id, request_id)` unique index, so the full event history is no longer loaded per mutation.
 
 ProjectContext measures each candidate incrementally: its own encoded bytes, a comma, and the re-encoded omitted counts and truncation flag. Selection order and greedy whole-node omission are unchanged. After selection, the service encodes the complete envelope; if the prediction differs, it recomputes the projection by encoding every candidate (the previous algorithm), so the byte budget is never relaxed. An internal randomized test compares both paths, and a conformance test compares scoped and complete-aggregate reads on memory and PostgreSQL.
+
+## 005: Process-level acceptance grant on graph-mcp
+
+`graph-mcp -acceptance human|validator|agent` is the host's grant of `graph_accept_goal` for that process. It is off by default. The stdio binary has no per-request policy. A host that needs one embeds the library and supplies `AcceptancePolicy`.
+
+## 006: Storage errors do not carry driver text
+
+SPEC requires every error message to be safe and to exclude SQL and credentials. `postgres.storageError` returns `storage_unavailable` with the fixed message "Graph service is unavailable." Coded graph errors pass through unchanged. The toolkit applies the same replacement, so a storage error built with driver text cannot reach a model either.

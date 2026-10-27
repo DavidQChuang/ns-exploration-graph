@@ -13,6 +13,15 @@ import (
 	"testing"
 )
 
+func TestStorageErrorsHideDriverText(t *testing.T) {
+	s := database(t)
+	s.Close()
+	_, e := s.Read(context.Background(), "postgres-tests", graph.NewID())
+	var ge *graph.Error
+	if !errors.As(e, &ge) || ge.Code != "storage_unavailable" || !ge.Retryable || ge.Message != "Graph service is unavailable." {
+		t.Fatalf("driver text leaked or code changed: %v", e)
+	}
+}
 func database(t *testing.T, options ...func(*postgres.Store)) *postgres.Store {
 	t.Helper()
 	dsn := os.Getenv("GRAPH_TEST_DATABASE_URL")
