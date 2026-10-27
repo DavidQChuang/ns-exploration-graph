@@ -9,6 +9,7 @@ import (
 	"ns-exploration-graph/spec"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -68,10 +69,58 @@ func ValidateSnapshot(encoded []byte) (Snapshot, error) {
 	if e = strict(encoded, &out); e != nil {
 		return out, e
 	}
+	canonicalizeSnapshotUUIDs(&out)
 	if e = validateSnapshotSemantics(out); e != nil {
 		return Snapshot{}, e
 	}
 	return out, nil
+}
+
+// UUID letter case is a representation choice, not an identity distinction.
+// Canonicalize the contract's UUID fields before semantic checks and storage so
+// UUID columns and UUID references carried in JSON retain the same identities.
+// Opaque metadata, payload extensions, URIs and attributable actor strings are
+// intentionally not interpreted as UUIDs.
+func canonicalizeSnapshotUUIDs(s *Snapshot) {
+	s.Graph.ID = strings.ToLower(s.Graph.ID)
+	for i := range s.Nodes {
+		n := &s.Nodes[i]
+		n.ID = strings.ToLower(n.ID)
+		if n.Kind != "work_item" {
+			continue
+		}
+		for j := range n.Revisions {
+			r := &n.Revisions[j]
+			var payload map[string]json.RawMessage
+			if json.Unmarshal(r.Payload, &payload) != nil {
+				continue
+			}
+			var executionID string
+			if json.Unmarshal(payload["execution_id"], &executionID) != nil || executionID == strings.ToLower(executionID) {
+				continue
+			}
+			payload["execution_id"] = raw(strings.ToLower(executionID))
+			r.Payload = raw(payload)
+		}
+	}
+	for i := range s.Edges {
+		e := &s.Edges[i]
+		e.ID, e.SourceID, e.TargetID = strings.ToLower(e.ID), strings.ToLower(e.SourceID), strings.ToLower(e.TargetID)
+	}
+	for i := range s.ResourceRefs {
+		r := &s.ResourceRefs[i]
+		r.ID, r.NodeID = strings.ToLower(r.ID), strings.ToLower(r.NodeID)
+	}
+	for i := range s.Acceptances {
+		a := &s.Acceptances[i]
+		a.ID, a.GoalID = strings.ToLower(a.ID), strings.ToLower(a.GoalID)
+		for j, id := range a.SupportEdgeIDs {
+			a.SupportEdgeIDs[j] = strings.ToLower(id)
+		}
+		for j, id := range a.ReviewedResourceIDs {
+			a.ReviewedResourceIDs[j] = strings.ToLower(id)
+		}
+	}
 }
 func snapshotInvalid(message string) error { return Err("invalid_argument", message) }
 func validateSnapshotSemantics(snap Snapshot) error {

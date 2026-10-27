@@ -2,8 +2,10 @@
 package conformance
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"ns-exploration-graph/graph"
 	"reflect"
 	"strings"
@@ -17,6 +19,7 @@ func Run(t *testing.T, newStore func(t *testing.T) graph.Store) {
 	runGaps(t, newStore)
 	runPublishedBoundaries(t, newStore)
 	runHostLifecycle(t, newStore)
+	runSnapshotUUIDCase(t, newStore)
 	t.Run("PersistentSliceReplayAndFencing", func(t *testing.T) {
 		s := graph.NewService(newStore(t))
 		ctx := context.Background()
@@ -845,4 +848,217 @@ func rejectHostMutation(t *testing.T, w *world, code string, call func(graph.Com
 	}
 	assertBoundaryUnchanged(t, w, before)
 	return c
+}
+
+func runSnapshotUUIDCase(t *testing.T, newStore func(t *testing.T) graph.Store) {
+	t.Run("SnapshotUppercaseUUIDReferencesRemainPortable", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "UUID portability")
+		work, wc := w.running("Probe", 1)
+		oid := w.observe(wc, "Measured", "Result", graph.ResourceInput{ResourceType: "log", URI: "urn:log:uppercase-uuid"})
+		w.accepted(wc, "Reviewed", oid)
+		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: work, Revision: 2}, State: "done"}))
+		encoded, e := w.s.ExportSnapshot(w.ctx, w.c.Namespace, w.c.GraphID)
+		if e != nil {
+			t.Fatal(e)
+		}
+		var document any
+		if e := json.Unmarshal(encoded, &document); e != nil {
+			t.Fatal(e)
+		}
+		// Give this fixture deterministic UUIDs containing A-F in every identity,
+		// including the UUID strings stored inside acceptance closure arrays and
+		// historical work payloads, while preserving all reference relationships.
+		ids := map[string]string{}
+		var uppercase func(any) any
+		uppercase = func(v any) any {
+			switch x := v.(type) {
+			case string:
+				if graph.ValidID(x) {
+					if ids[x] == "" {
+						ids[x] = fmt.Sprintf("ABCDEF01-ABCD-4ABC-8DEF-%012X", len(ids)+1)
+					}
+					return ids[x]
+				}
+			case map[string]any:
+				for k, item := range x {
+					x[k] = uppercase(item)
+				}
+			case []any:
+				for i, item := range x {
+					x[i] = uppercase(item)
+				}
+			}
+			return v
+		}
+		encoded, e = json.Marshal(uppercase(document))
+		if e != nil {
+			t.Fatal(e)
+		}
+		for _, mixed := range []bool{false, true} {
+			var input graph.Snapshot
+			if e := json.Unmarshal(encoded, &input); e != nil {
+				t.Fatal(e)
+			}
+			const opaque = "ABCDEFAB-CDEF-4ABC-8DEF-ABCDEFABCDEF"
+			input.Graph.Metadata["opaque_uuid"] = opaque
+			input.Graph.ExternalRef = opaque
+			for i := range input.Nodes {
+				n := &input.Nodes[i]
+				if mixed {
+					n.ID = strings.ToLower(n.ID)
+				}
+				for j := range n.Revisions {
+					r := &n.Revisions[j]
+					r.ActorID = opaque
+					if n.Kind != "work_item" {
+						continue
+					}
+					var payload map[string]json.RawMessage
+					if e := json.Unmarshal(r.Payload, &payload); e != nil {
+						t.Fatal(e)
+					}
+					payload["extensions"] = json.RawMessage(`{"opaque_uuid":"` + opaque + `","large_integer":9007199254740993}`)
+					if mixed && r.State == "running" {
+						var executionID string
+						if e := json.Unmarshal(payload["execution_id"], &executionID); e != nil {
+							t.Fatal(e)
+						}
+						payload["execution_id"], _ = json.Marshal(strings.ToLower(executionID))
+					}
+					r.Payload, _ = json.Marshal(payload)
+				}
+			}
+			for i := range input.Edges {
+				if mixed {
+					input.Edges[i].ID = strings.ToLower(input.Edges[i].ID)
+				}
+				input.Edges[i].ActorID = opaque
+			}
+			for i := range input.ResourceRefs {
+				if mixed {
+					input.ResourceRefs[i].ID = strings.ToLower(input.ResourceRefs[i].ID)
+				}
+				input.ResourceRefs[i].ExternalRevision, input.ResourceRefs[i].ActorID, input.ResourceRefs[i].URI = opaque, opaque, "urn:uuid:"+opaque
+			}
+			for i := range input.Acceptances {
+				if mixed {
+					input.Acceptances[i].ID = strings.ToLower(input.Acceptances[i].ID)
+				}
+				input.Acceptances[i].ActorID = opaque
+			}
+			caseBytes, e := json.Marshal(input)
+			if e != nil {
+				t.Fatal(e)
+			}
+			validated, e := graph.ValidateSnapshot(caseBytes)
+			if e != nil {
+				t.Fatalf("mixed=%v UUID snapshot rejected before restore: %v", mixed, e)
+			}
+			if validated.Graph.ID != strings.ToLower(input.Graph.ID) {
+				t.Fatal("source graph UUID not canonical")
+			}
+			if len(validated.Acceptances) != 1 || len(validated.Acceptances[0].SupportEdgeIDs) != 1 || len(validated.Acceptances[0].ReviewedResourceIDs) != 1 {
+				t.Fatal("fixture lacks reviewed edge/resource UUID references")
+			}
+			dest := w.next()
+			dest.GraphID = graph.NewID()
+			w.must(w.s.ImportSnapshot(w.ctx, dest, caseBytes))
+			restored, e := w.s.ExportSnapshot(w.ctx, dest.Namespace, dest.GraphID)
+			if e != nil {
+				t.Fatal(e)
+			}
+			got, e := graph.ValidateSnapshot(restored)
+			if e != nil {
+				t.Fatalf("mixed=%v UUID references broke exported snapshot: %v", mixed, e)
+			}
+			if !reflect.DeepEqual(snapshotUUIDRecords(t, validated), snapshotUUIDRecords(t, got)) {
+				t.Fatalf("mixed=%v restore changed canonical identities, history, or reviewed records", mixed)
+			}
+			if got.Graph.ExternalRef != opaque || got.Graph.Metadata["opaque_uuid"] != opaque {
+				t.Fatal("opaque graph strings were normalized")
+			}
+			for _, n := range got.Nodes {
+				if n.ID != strings.ToLower(n.ID) {
+					t.Fatal("node UUID not canonical")
+				}
+				for _, r := range n.Revisions {
+					if r.ActorID != opaque {
+						t.Fatal("opaque actor identity was normalized")
+					}
+					if n.Kind != "work_item" {
+						continue
+					}
+					var payload struct {
+						ExecutionID string                     `json:"execution_id"`
+						Extensions  map[string]json.RawMessage `json:"extensions"`
+					}
+					if e := json.Unmarshal(r.Payload, &payload); e != nil {
+						t.Fatal(e)
+					}
+					if payload.ExecutionID != strings.ToLower(payload.ExecutionID) {
+						t.Fatal("historical execution UUID not canonical")
+					}
+					var opaqueValue string
+					if e := json.Unmarshal(payload.Extensions["opaque_uuid"], &opaqueValue); e != nil || opaqueValue != opaque || string(payload.Extensions["large_integer"]) != "9007199254740993" {
+						t.Fatal("opaque extension changed during UUID normalization")
+					}
+				}
+			}
+			// Distinct spellings of one UUID must not bypass duplicate detection.
+			collision := input
+			alias := input.Nodes[0]
+			alias.ID = strings.ToLower(alias.ID)
+			if alias.ID == input.Nodes[0].ID {
+				alias.ID = strings.ToUpper(alias.ID)
+			}
+			collision.Nodes = append(append([]graph.Node(nil), input.Nodes...), alias)
+			badBytes, _ := json.Marshal(collision)
+			if _, e := graph.ValidateSnapshot(badBytes); graph.ErrorCode(e) != "invalid_argument" {
+				t.Fatalf("case-alias identity collision accepted: %v", e)
+			}
+			rejected := w.next()
+			rejected.GraphID = graph.NewID()
+			if _, e := w.s.ImportSnapshot(w.ctx, rejected, badBytes); graph.ErrorCode(e) != "invalid_argument" {
+				t.Fatalf("case-alias collision imported: %v", e)
+			}
+			if _, e := w.s.Snapshot(w.ctx, rejected.Namespace, rejected.GraphID); graph.ErrorCode(e) != "not_found" {
+				t.Fatalf("collision rejection left graph state: %v", e)
+			}
+			if _, e := w.s.EventsAfter(w.ctx, rejected.Namespace, rejected.GraphID, 0, 10); graph.ErrorCode(e) != "not_found" {
+				t.Fatalf("collision rejection left events: %v", e)
+			}
+			w.must(w.s.ImportSnapshot(w.ctx, rejected, caseBytes))
+		}
+	})
+}
+
+func snapshotUUIDRecords(t *testing.T, snapshot graph.Snapshot) map[string]any {
+	t.Helper()
+	out := map[string]any{}
+	add := func(kind, id string, value any) {
+		encoded, e := json.Marshal(value)
+		if e != nil {
+			t.Fatal(e)
+		}
+		var decoded any
+		decoder := json.NewDecoder(bytes.NewReader(encoded))
+		decoder.UseNumber()
+		if e := decoder.Decode(&decoded); e != nil {
+			t.Fatal(e)
+		}
+		out[kind+":"+id] = decoded
+	}
+	for _, n := range snapshot.Nodes {
+		add("node", n.ID, n)
+	}
+	for _, e := range snapshot.Edges {
+		add("edge", e.ID, e)
+	}
+	for _, r := range snapshot.ResourceRefs {
+		add("resource", r.ID, r)
+	}
+	for _, a := range snapshot.Acceptances {
+		add("acceptance", a.ID, a)
+	}
+	return out
 }
