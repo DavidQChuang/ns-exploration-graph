@@ -1,0 +1,11 @@
+.local/
+.tmp/
+bin/
+coverage.out
+*.exe
+*.test
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example

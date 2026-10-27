@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Exploration graph snapshot v1 (proposed)",
+  "description": "Structural validation only; SPEC.md defines graph-wide and state-transition invariants.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "graph", "nodes", "edges", "resource_refs", "acceptances"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "graph": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "namespace", "description", "state", "revision", "metadata", "created_at", "updated_at"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "namespace": {"$ref": "#/$defs/text"},
+        "external_ref": {"type": "string"}, "description": {"type": "string"},
+        "state": {"enum": ["active", "closed", "archived"]},
+        "revision": {"type": "integer", "minimum": 0}, "metadata": {"type": "object"},
+        "created_at": {"$ref": "#/$defs/time"}, "updated_at": {"$ref": "#/$defs/time"}
+      }
+    },
+    "nodes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/node"}},
+    "edges": {"type": "array", "items": {"$ref": "#/$defs/edge"}},
+    "resource_refs": {"type": "array", "items": {"$ref": "#/$defs/resource"}},
+    "acceptances": {"type": "array", "items": {"$ref": "#/$defs/acceptance"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"},
+    "text": {"type": "string", "minLength": 1},
+    "time": {"type": "string", "format": "date-time"},
+    "version": {"type": "integer", "minimum": 1},
+    "revision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["revision", "state", "title", "payload", "actor_id", "created_at"],
+      "properties": {
+        "revision": {"$ref": "#/$defs/version"}, "state": {"$ref": "#/$defs/text"},
+        "title": {"$ref": "#/$defs/text"}, "payload": {"type": "object"},
+        "actor_id": {"$ref": "#/$defs/text"}, "created_at": {"$ref": "#/$defs/time"}
+      }
+    },
+    "node": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "current_revision", "created_at", "revisions"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["origin", "goal", "work_item", "observation", "conclusion", "hint"]},
+        "current_revision": {"$ref": "#/$defs/version"}, "created_at": {"$ref": "#/$defs/time"},
+        "revisions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/revision"}}
+      },
+      "allOf": [
+        {"if": {"properties": {"kind": {"const": "origin"}}}, "then": {"properties": {"revisions": {"items": {"properties": {"state": {"const": "recorded"}, "payload": {"$ref": "#/$defs/originPayload"}}}}}}},
+        {"if": {"properties": {"kind": {"const": "goal"}}}, "then": {"properties": {"revisions": {"items": {"properties": {"state": {"enum": ["open", "met", "abandoned", "needs_review"]}, "payload": {"$ref": "#/$defs/goalPayload"}}}}}}},
+        {"if": {"properties": {"kind": {"const": "work_item"}}}, "then": {"properties": {"revisions": {"items": {"properties": {"state": {"enum": ["open", "running", "paused", "done", "blocked", "exhausted", "stopped"]}, "payload": {"$ref": "#/$defs/workPayload"}}, "if": {"properties": {"state": {"const": "running"}}}, "then": {"properties": {"payload": {"required": ["execution_id"]}}}}}}}},
+        {"if": {"properties": {"kind": {"enum": ["observation", "conclusion"]}}}, "then": {"properties": {"revisions": {"items": {"properties": {"state": {"enum": ["active", "retracted"]}, "payload": {"$ref": "#/$defs/evidencePayload"}}}}}}},
+        {"if": {"properties": {"kind": {"const": "hint"}}}, "then": {"properties": {"revisions": {"items": {"properties": {"state": {"enum": ["active", "consumed"]}, "payload": {"$ref": "#/$defs/hintPayload"}}}}}}}
+      ]
+    },
+    "originPayload": {
+      "type": "object", "additionalProperties": false, "required": ["request"],
+      "properties": {"request": {"$ref": "#/$defs/text"}, "extensions": {"type": "object"}}
+    },
+    "goalPayload": {
+      "type": "object", "additionalProperties": false, "required": ["acceptance_criteria"],
+      "properties": {
+        "acceptance_criteria": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+        "extensions": {"type": "object"}
+      }
+    },
+    "workPayload": {
+      "type": "object", "additionalProperties": false, "required": ["instruction", "priority"],
+      "properties": {
+        "instruction": {"$ref": "#/$defs/text"}, "priority": {"type": "integer", "minimum": 0, "maximum": 100},
+        "owner_ref": {"type": "string"}, "execution_id": {"$ref": "#/$defs/id"},
+        "reason": {"type": "string"}, "extensions": {"type": "object"}
+      }
+    },
+    "evidencePayload": {
+      "type": "object", "additionalProperties": false, "required": ["statement", "epistemic_status"],
+      "properties": {
+        "statement": {"$ref": "#/$defs/text"}, "epistemic_status": {"enum": ["observed", "inferred", "reported"]},
+        "polarity": {"enum": ["positive", "negative", "neutral"]}, "detail": {"type": "string"},
+        "evidence": {"$ref": "#/$defs/text"},
+        "extensions": {"type": "object"}
+      }
+    },
+    "hintPayload": {
+      "type": "object", "additionalProperties": false, "required": ["instruction"],
+      "properties": {"instruction": {"$ref": "#/$defs/text"}, "extensions": {"type": "object"}}
+    },
+    "edge": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "source_id", "target_id", "relation", "actor_id", "created_at"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "source_id": {"$ref": "#/$defs/id"}, "target_id": {"$ref": "#/$defs/id"},
+        "source_revision": {"$ref": "#/$defs/version"}, "target_revision": {"$ref": "#/$defs/version"},
+        "relation": {"enum": ["spawns", "derived_from", "yields", "supports", "depends_on"]},
+        "actor_id": {"$ref": "#/$defs/text"}, "created_at": {"$ref": "#/$defs/time"}
+      },
+      "if": {"properties": {"relation": {"const": "depends_on"}}},
+      "then": {"not": {"anyOf": [{"required": ["source_revision"]}, {"required": ["target_revision"]}]}},
+      "else": {"required": ["source_revision", "target_revision"]}
+    },
+    "resource": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "node_id", "node_revision", "resource_type", "uri", "actor_id", "created_at"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "node_id": {"$ref": "#/$defs/id"}, "node_revision": {"$ref": "#/$defs/version"},
+        "resource_type": {"$ref": "#/$defs/text"}, "uri": {"type": "string", "minLength": 1, "format": "uri"},
+        "external_revision": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "actor_id": {"$ref": "#/$defs/text"}, "created_at": {"$ref": "#/$defs/time"}
+      }
+    },
+    "acceptance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "goal_id", "evaluated_revision", "resulting_revision", "support_edge_ids", "reviewed_resource_ids", "actor_id", "method", "rationale", "state", "created_at"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "goal_id": {"$ref": "#/$defs/id"},
+        "evaluated_revision": {"$ref": "#/$defs/version"}, "resulting_revision": {"$ref": "#/$defs/version"},
+        "support_edge_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "reviewed_resource_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "actor_id": {"$ref": "#/$defs/text"}, "method": {"enum": ["human", "validator", "agent"]},
+        "rationale": {"$ref": "#/$defs/text"}, "state": {"enum": ["current", "stale"]},
+        "stale_reason": {"$ref": "#/$defs/text"}, "created_at": {"$ref": "#/$defs/time"}
+      },
+      "if": {"properties": {"state": {"const": "stale"}}},
+      "then": {"required": ["stale_reason"]}
+    }
+  }
+}

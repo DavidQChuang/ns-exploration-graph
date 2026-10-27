@@ -1,0 +1,482 @@
+{
+  "contract_version": "0.2",
+  "status": "proposed",
+  "description": "Transport-neutral model input schemas. This manifest is not itself an MCP protocol message. Host context and output semantics are specified in TOOLS.md.",
+  "tools": [
+    {
+      "name": "graph_overview",
+      "description": "Read a bounded current graph projection; reuse the host-injected overview when sufficient.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "byte_budget": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 65536
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "graph_get_node",
+      "description": "Read one exact or current node revision with paginated related edges and resource references.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "related_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          }
+        },
+        "required": [
+          "node_id"
+        ]
+      }
+    },
+    {
+      "name": "graph_list_nodes",
+      "description": "List current node summaries; restart from the first page after stale_cursor.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "origin",
+              "goal",
+              "work_item",
+              "observation",
+              "conclusion",
+              "hint"
+            ]
+          },
+          "state": {
+            "enum": [
+              "recorded",
+              "open",
+              "met",
+              "abandoned",
+              "needs_review",
+              "running",
+              "paused",
+              "done",
+              "blocked",
+              "exhausted",
+              "stopped",
+              "active",
+              "retracted",
+              "consumed"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "graph_propose_work",
+      "description": "Propose open work derived from exact current evidence revisions; omitted parents use the origin.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "instruction": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "parents": {
+            "type": "array",
+            "minItems": 0,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                }
+              },
+              "required": [
+                "id",
+                "revision"
+              ]
+            }
+          }
+        },
+        "required": [
+          "title",
+          "instruction",
+          "priority"
+        ]
+      }
+    },
+    {
+      "name": "graph_record_observation",
+      "description": "Record new evidence against the host-bound running assignment; never supply a producer identity.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "epistemic_status": {
+            "enum": [
+              "observed",
+              "inferred",
+              "reported"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "resource_refs": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "resource_type": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "uri": {
+                  "type": "string",
+                  "format": "uri",
+                  "minLength": 1,
+                  "maxLength": 8192
+                },
+                "external_revision": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8192
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "resource_type",
+                "uri"
+              ]
+            }
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "polarity": {
+            "enum": [
+              "positive",
+              "negative",
+              "neutral"
+            ]
+          }
+        },
+        "required": [
+          "title",
+          "statement",
+          "evidence",
+          "epistemic_status"
+        ]
+      }
+    },
+    {
+      "name": "graph_record_conclusion",
+      "description": "Record a synthesis grounded in exact supporting evidence revisions.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "epistemic_status": {
+            "enum": [
+              "observed",
+              "inferred",
+              "reported"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "resource_refs": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "resource_type": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "uri": {
+                  "type": "string",
+                  "format": "uri",
+                  "minLength": 1,
+                  "maxLength": 8192
+                },
+                "external_revision": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8192
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "resource_type",
+                "uri"
+              ]
+            }
+          },
+          "supports": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                }
+              },
+              "required": [
+                "id",
+                "revision"
+              ]
+            }
+          }
+        },
+        "required": [
+          "title",
+          "statement",
+          "epistemic_status",
+          "supports"
+        ]
+      }
+    },
+    {
+      "name": "graph_add_support",
+      "description": "Link exact current evidence to an active conclusion or open/needs_review goal.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          }
+        },
+        "required": [
+          "source",
+          "target"
+        ]
+      }
+    },
+    {
+      "name": "graph_accept_goal",
+      "description": "Accept a goal only with an explicit host grant and sufficient fresh evidence.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "goal": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "support_edge_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+            }
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          }
+        },
+        "required": [
+          "goal",
+          "support_edge_ids",
+          "rationale"
+        ]
+      }
+    }
+  ],
+  "role_presets": {
+    "planner": [
+      "graph_overview",
+      "graph_get_node",
+      "graph_list_nodes",
+      "graph_propose_work",
+      "graph_record_conclusion",
+      "graph_add_support"
+    ],
+    "worker": [
+      "graph_overview",
+      "graph_get_node",
+      "graph_list_nodes",
+      "graph_record_observation",
+      "graph_record_conclusion"
+    ],
+    "solo": [
+      "graph_overview",
+      "graph_get_node",
+      "graph_list_nodes",
+      "graph_propose_work",
+      "graph_record_observation",
+      "graph_record_conclusion",
+      "graph_add_support"
+    ]
+  },
+  "capability_gated_tools": {
+    "accept_goal": [
+      "graph_accept_goal"
+    ]
+  }
+}

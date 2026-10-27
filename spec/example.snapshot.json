@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "graph": {
+    "id": "00000000-0000-4000-8000-000000001000",
+    "namespace": "example",
+    "description": "Verify a parser fix",
+    "state": "active",
+    "revision": 8,
+    "metadata": {},
+    "created_at": "2026-10-26T12:00:00Z",
+    "updated_at": "2026-10-26T12:00:00Z"
+  },
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "kind": "origin",
+      "current_revision": 1,
+      "created_at": "2026-10-26T12:00:00Z",
+      "revisions": [
+        {
+          "revision": 1,
+          "state": "recorded",
+          "title": "origin",
+          "payload": {
+            "request": "Verify the parser fix."
+          },
+          "actor_id": "example:harness",
+          "created_at": "2026-10-26T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "kind": "goal",
+      "current_revision": 2,
+      "created_at": "2026-10-26T12:00:00Z",
+      "revisions": [
+        {
+          "revision": 1,
+          "state": "open",
+          "title": "goal",
+          "payload": {
+            "acceptance_criteria": [
+              "Regression test passes."
+            ]
+          },
+          "actor_id": "example:harness",
+          "created_at": "2026-10-26T12:00:00Z"
+        },
+        {
+          "revision": 2,
+          "state": "met",
+          "title": "goal",
+          "payload": {
+            "acceptance_criteria": [
+              "Regression test passes."
+            ]
+          },
+          "actor_id": "example:harness",
+          "created_at": "2026-10-26T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "kind": "work_item",
+      "current_revision": 3,
+      "created_at": "2026-10-26T12:00:00Z",
+      "revisions": [
+        {
+          "revision": 1,
+          "state": "open",
+          "title": "work_item",
+          "payload": {
+            "instruction": "Run the parser regression test.",
+            "priority": 50
+          },
+          "actor_id": "example:harness",
+          "created_at": "2026-10-26T12:00:00Z"
+        },
+        {
+          "revision": 2,
+          "state": "running",
+          "title": "work_item",
+          "payload": {
+            "instruction": "Run the parser regression test.",
+            "priority": 50,
+            "execution_id": "00000000-0000-4000-8000-000000000401"
+          },
+          "actor_id": "example:harness",
+          "created_at": "2026-10-26T12:00:00Z"
+        },
+        {
+          "revision": 3,
+          "state": "done",
+          "title": "work_item",
+          "payload": {
+            "instruction": "Run the parser regression test.",
+            "priority": 50,
+            "execution_id": "00000000-0000-4000-8000-000000000401"
+          },
+          "actor_id": "example:harness",
+          "created_at": "2026-10-26T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "kind": "observation",
+      "current_revision": 1,
+      "created_at": "2026-10-26T12:00:00Z",
+      "revisions": [
+        {
+          "revision": 1,
+          "state": "active",
+          "title": "observation",
+          "payload": {
+            "statement": "The regression test passed.",
+            "epistemic_status": "observed",
+            "polarity": "positive"
+          },
+          "actor_id": "example:harness",
+          "created_at": "2026-10-26T12:00:00Z"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "00000000-0000-4000-8000-000000000101",
+      "source_id": "00000000-0000-4000-8000-000000000001",
+      "source_revision": 1,
+      "target_id": "00000000-0000-4000-8000-000000000002",
+      "target_revision": 1,
+      "relation": "spawns",
+      "actor_id": "example:harness",
+      "created_at": "2026-10-26T12:00:00Z"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000102",
+      "source_id": "00000000-0000-4000-8000-000000000001",
+      "source_revision": 1,
+      "target_id": "00000000-0000-4000-8000-000000000003",
+      "target_revision": 1,
+      "relation": "derived_from",
+      "actor_id": "example:harness",
+      "created_at": "2026-10-26T12:00:00Z"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000103",
+      "source_id": "00000000-0000-4000-8000-000000000003",
+      "source_revision": 2,
+      "target_id": "00000000-0000-4000-8000-000000000004",
+      "target_revision": 1,
+      "relation": "yields",
+      "actor_id": "example:harness",
+      "created_at": "2026-10-26T12:00:00Z"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000104",
+      "source_id": "00000000-0000-4000-8000-000000000004",
+      "source_revision": 1,
+      "target_id": "00000000-0000-4000-8000-000000000002",
+      "target_revision": 1,
+      "relation": "supports",
+      "actor_id": "example:harness",
+      "created_at": "2026-10-26T12:00:00Z"
+    }
+  ],
+  "resource_refs": [
+    {
+      "id": "00000000-0000-4000-8000-000000000201",
+      "node_id": "00000000-0000-4000-8000-000000000004",
+      "node_revision": 1,
+      "resource_type": "test_log",
+      "uri": "artifact://example/parser-test/1",
+      "actor_id": "example:harness",
+      "created_at": "2026-10-26T12:00:00Z"
+    }
+  ],
+  "acceptances": [
+    {
+      "id": "00000000-0000-4000-8000-000000000301",
+      "goal_id": "00000000-0000-4000-8000-000000000002",
+      "evaluated_revision": 1,
+      "resulting_revision": 2,
+      "support_edge_ids": [
+        "00000000-0000-4000-8000-000000000104"
+      ],
+      "reviewed_resource_ids": [
+        "00000000-0000-4000-8000-000000000201"
+      ],
+      "actor_id": "example:validator",
+      "method": "validator",
+      "rationale": "The referenced regression test satisfies the criterion.",
+      "state": "current",
+      "created_at": "2026-10-26T12:00:00Z"
+    }
+  ]
+}
