@@ -1,10 +1,13 @@
 """Generate output schemas and the embedded manifest from versioned contracts.
 
 Run from any working directory: python toolkit/generate_contracts.py
+Use --check to verify, without writing, that spec/tool-contracts.json and
+toolkit/contracts.json are what this generator produces, ignoring CRLF/LF checkout differences (CI/drift gate).
 Uses only the Python standard library. Go tests assert byte parity afterward.
 """
 import copy
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -62,5 +65,12 @@ for tool in manifest["tools"]:
                             "oneOf": [obj({"ok": {"const": True}, "graph_revision": VER, "data": outputs[tool["name"]]}), failure], "$defs": defs}
 manifest["description"] = "Transport-neutral strict model input and result envelope schemas. Trusted context is host-owned."
 encoded = json.dumps(manifest, indent=2) + "\n"
-(ROOT / "spec/tool-contracts.json").write_text(encoded, encoding="utf-8")
-(ROOT / "toolkit/contracts.json").write_text(encoded, encoding="utf-8")
+targets = [ROOT / "spec/tool-contracts.json", ROOT / "toolkit/contracts.json"]
+if "--check" in sys.argv[1:]:
+    drift = [str(t.relative_to(ROOT)) for t in targets if t.read_bytes().decode("utf-8").replace("\r\n", "\n") != encoded]
+    if drift:
+        sys.exit("contract drift: run python toolkit/generate_contracts.py; differs: " + ", ".join(drift))
+    print("contracts match generator output: " + ", ".join(str(t.relative_to(ROOT)) for t in targets))
+else:
+    for t in targets:
+        t.write_text(encoded, encoding="utf-8", newline="\n")

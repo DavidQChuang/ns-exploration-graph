@@ -1,4 +1,8 @@
 // Package toolkit binds the narrow agent contract to trusted host context.
+//
+// Prompts are guidance, not enforcement: the shipped prompt assets describe correct use
+// but grant and restrict nothing. Every invocation is authorized by the adapter and every
+// graph rule is enforced by the service, regardless of what a model was told or reads.
 package toolkit
 
 import (
@@ -7,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -48,7 +53,15 @@ func load() error {
 		contract.inputs = map[string]*jsonschema.Schema{}
 		contract.outputs = map[string]*jsonschema.Schema{}
 		for _, d := range contract.Tools {
-			for direction, doc := range map[string]map[string]any{"input": d.InputSchema, "output": d.OutputSchema} {
+			for direction, schema := range map[string]map[string]any{"input": d.InputSchema, "output": d.OutputSchema} {
+				// Same approach as graph/snapshot.go: schema documents are loaded with
+				// jsonschema.UnmarshalJSON and formats (uuid, uri, date-time) are asserted.
+				encoded, _ := json.Marshal(schema)
+				doc, e := jsonschema.UnmarshalJSON(bytes.NewReader(encoded))
+				if e != nil {
+					contract.err = e
+					return
+				}
 				c := jsonschema.NewCompiler()
 				c.AssertFormat()
 				u := "https://exploration.invalid/" + d.Name + "/" + direction
@@ -107,6 +120,51 @@ func validate(name string, b []byte, output bool) error {
 }
 func ValidateInput(name string, b []byte) error  { return validate(name, b, false) }
 func ValidateOutput(name string, b []byte) error { return validate(name, b, true) }
+
+// PromptVersion is the version of the shipped prompt assets. Every prompt file
+// begins with a "<!-- prompt-version: N -->" line; all files must agree.
+// Prompts are guidance only. They never grant or restrict a tool: the adapter
+// authorizes every invocation and the service enforces graph semantics.
+func PromptVersion() (string, error) {
+	files, e := assets.ReadDir("prompts")
+	if e != nil {
+		return "", e
+	}
+	version := ""
+	for _, f := range files {
+		b, e := assets.ReadFile("prompts/" + f.Name())
+		if e != nil {
+			return "", e
+		}
+		v, _, e := promptBody(string(b))
+		if e != nil {
+			return "", fmt.Errorf("%s: %w", f.Name(), e)
+		}
+		if version != "" && v != version {
+			return "", fmt.Errorf("%s: prompt version %s differs from %s", f.Name(), v, version)
+		}
+		version = v
+	}
+	return version, nil
+}
+
+const promptHeader = "<!-- prompt-version: "
+
+func promptBody(s string) (version, body string, err error) {
+	line, rest, _ := strings.Cut(s, "\n")
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, promptHeader) || !strings.HasSuffix(line, " -->") {
+		return "", "", fmt.Errorf("missing prompt version header")
+	}
+	version = strings.TrimSuffix(strings.TrimPrefix(line, promptHeader), " -->")
+	if version == "" {
+		return "", "", fmt.Errorf("empty prompt version")
+	}
+	return version, strings.TrimLeft(rest, "\r\n"), nil
+}
+
+// Prompt returns the shared, role and finish guidance for a role preset, without
+// version headers.
 func Prompt(role string) (string, error) {
 	if e := load(); e != nil {
 		return "", e
@@ -120,7 +178,11 @@ func Prompt(role string) (string, error) {
 		if e != nil {
 			return "", e
 		}
-		out += string(b) + "\n"
+		_, body, e := promptBody(string(b))
+		if e != nil {
+			return "", fmt.Errorf("%s: %w", p, e)
+		}
+		out += body + "\n"
 	}
 	return out, nil
 }

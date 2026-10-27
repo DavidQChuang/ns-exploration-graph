@@ -61,9 +61,12 @@ type Envelope struct {
 	Error         *graph.Error `json:"error,omitempty"`
 }
 
+// Failure builds the stable error envelope. Anything that is not a coded graph
+// error, and every storage_unavailable, is replaced by a fixed safe message so
+// driver or SQL text never reaches the model.
 func Failure(err error) Envelope {
 	var e *graph.Error
-	if !errors.As(err, &e) {
+	if !errors.As(err, &e) || e.Code == "storage_unavailable" {
 		e = graph.Err("storage_unavailable", "Graph service is unavailable.")
 	}
 	return Envelope{Error: e}
