@@ -45,3 +45,4 @@ jobs:
         with:
           name: release-evidence-go${{ matrix.go }}
           path: .local/release-evidence
+          include-hidden-files: true
