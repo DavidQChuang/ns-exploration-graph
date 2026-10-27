@@ -1,6 +1,6 @@
 # Implementation task ledger
 
-Status: active. Scope: complete portable-tool release M1 + M2; optional viewer M3 deferred by the accepted plan.
+Status: complete. Delivered local source release0.2.0 for the complete portable-tool scope M1+M2; optional viewer M3 remains outside this release.
 
 - [x] Bootstrap dedicated local Git repository and import specification.
 - [x] G0: Freeze typed contracts, results, dependencies, fixtures, and decisions. Decisions 001–009, result schemas, and the generator drift check are recorded. Public changes after this point need a new decision.
@@ -8,8 +8,8 @@ Status: active. Scope: complete portable-tool release M1 + M2; optional viewer M
 - [x] G2: All semantic commands, freshness, acceptance invalidation, execution fencing, conformance. Root reran the shared suite on memory and PostgreSQL on 2026-10-27.
 - [x] G3: Bounded projection, traversal/cursors, events, snapshot export/restore, benchmarks. Overview is bounded; traversal and GetNode stay O(nodes+edges), measured and documented. Commit 7fa9d4f.
 - [x] G4: Eight tools, strict validation, role/context enforcement, scripted harness and prompt assets. Passed in the root suite. No model-backed smoke test (optional in the plan).
-- [ ] G5: MCP adapter, protocol parity, clean setup, documentation, CI, release audit. Native clean-source/race/CI-payload verification passed at 01a1bf1 on Go1.25.0 and1.27.3. Final audited fixes, literal two-stage resume fixture, final-candidate rerun, contract approval and archive/sign-off remain open. Hosted GitHub Actions has not executed; no remote publication is authorized.
+- [x] G5: MCP adapter/parity, clean setup, documentation, CI payload and release audit. Corrected62c083f native clean/race matrices pass on Go1.25.0/Go1.27.3:195passes each,zero failures/skipped tests. Approved0.2.0 source archives, inventory/checksums and root sign-off are recorded in docs/RELEASE-ARTIFACTS.md. Hosted GitHub orchestration was not executed; no remote publication was required or performed.
 - [x] Independent correctness/security review; resolve all material findings. Reviewer 35e7e671 reported two medium and three low findings; review_fixes 1941b273 resolved them; root reran the suite on 2026-10-27.
-- [ ] Final requirements-to-evidence audit and clean committed delivery.
+- [x] Final requirements-to-evidence audit and clean committed delivery. Local tagv0.2.0/source7521239 identifies the immutable89-file source delivery; repository main retains the post-archive attestation.
 
-Current focus: corrected-source full clean matrix at62c083f, sessions54818/84590. Shared stable URI validation now passes focused native race tests on both supported compilers, preserving the prior failing assertion. The full matrix is running independently while model work waits for the18:11ETaccount reset. On recovery inspect existing logs/handles; then final audit evidence, source archive/checksum and release sign-off. Lifecycle, UUID portability and the complete two-stage fixture remain accepted. Source release0.2.0 is not complete.
+Current state: complete; no implementation or verification jobs remain. ZIP/TAR.GZ, detached per-file manifest and SHA256SUMS are under .local/releases/0.2.0/. Runtime/contract/prompt/CI content is unchanged from tested62c083f; source-tag differences are documentation only. Completion of the durable goal and deletion of its recovery heartbeat follow this committed delivery checkpoint. Further work requires a new user request.

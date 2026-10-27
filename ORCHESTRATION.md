@@ -4,7 +4,11 @@ Repository: C:\Users\dc\Downloads\crowncards_breach_writeup_10-25-26\ns-explorat
 
 Root role: coordinator, integrator, release auditor, and Git committer. Implementation is delegated.
 
-## Active assignments
+## Completed delivery
+
+Scoped M1+M2 implementation and local source release0.2.0 are complete. Local tagv0.2.0 points to7521239b9f109d2e39cf3aadaa5f8d5ae5b908d2; compiled code/contracts/prompts/CI are identical to clean-tested62c083f. Actual ZIP/TAR.GZ, manifest and checksums are under.local/releases/0.2.0/; see docs/RELEASE-ARTIFACTS.md. No model agent or verification job remains active. Historical checkpoints below must not trigger resumption. The finalizer completes the durable goal and deletes its heartbeat after the clean committed attestation/checksum checks. Any later feature, viewer or publication work requires a new user request.
+
+## Historical assignments and checkpoints
 
 Final runtime verification is complete: corrected62c083f recorded195passes/zero failed or skipped tests in each native clean compiler lane, including required PostgreSQL/Python, race detection, transport parity and the patched vulnerability scan. Old sessions54818/84590 expired after completion; durable logs were inspected, and no test job is live. All implementation/review/documentation agents ended. Root is finalizing only source archives, detached inventory/checksums, local v0.2.0 tag, delivery attestations and completion of the goal/heartbeat. Do not restart implementation or test matrices without a newly demonstrated defect. Full history below is retained for auditability.
 

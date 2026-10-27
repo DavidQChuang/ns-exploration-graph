@@ -16,6 +16,8 @@ Preflight commit: `9da1e0b9e33aba4a2aef9fb79b9a85f67d76433d`. Root compared all 
 
 The final documentation commit will be identified by local Git tag `v0.2.0`. Root will regenerate ZIP and TAR.GZ source archives from that commit, repeat the Git byte-equivalence and inventory checks, and produce a detached manifest and `SHA256SUMS` in `.local/releases/0.2.0/`. The manifest/checksum file remains outside the archives to avoid a self-referential checksum. Final artifact filenames, hashes and manifest contents will be recorded by root after generation; no final archive checksum is asserted in this sign-off.
 
+Post-archive completion: tagv0.2.0 identifies7521239b9f109d2e39cf3aadaa5f8d5ae5b908d2. Both89-file source archives were generated, inspected against Git and checksummed; delivery is complete. Exact final hashes, sizes and scope are in [RELEASE-ARTIFACTS.md](RELEASE-ARTIFACTS.md) and the detached manifest/checksum files. This post-packaging attestation does not modify the immutable tagged archive.
+
 The distribution is source-only: it contains project source and license/notice files, without Go or PostgreSQL runtimes/toolchains, built executables or dependency binaries. The included third-party dependency inventory is an engineering record, not legal review or a legal conclusion.
 
 ## Known scope limits
