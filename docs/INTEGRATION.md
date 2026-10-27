@@ -78,7 +78,7 @@ A client without durable invocation identity must treat a lost response or disco
 
 ## 8. Limits and compatibility
 
-Limits and versions are listed in `README.md`. Unknown tool fields and over-limit input are rejected rather than repaired. Contract version 0.2 is still `proposed`: schemas, error codes and prompt assets are versioned artifacts and may change only with a contract change recorded in `docs/DECISIONS.md`; `python toolkit/generate_contracts.py --check` and the tests in `toolkit/` fail on drift.
+Limits and versions are listed in `README.md`. Unknown tool fields and over-limit input are rejected rather than repaired. Normative contract version 0.2 is approved by `docs/DECISIONS.md` 012. Changes to its schemas, error codes or prompt assets require a recorded contract decision; intentional breaking changes require a new minor contract/release version and compatibility notes. Final candidate verification remains pending. `python toolkit/generate_contracts.py --check` and the tests in `toolkit/` fail on generated contract drift.
 
 ## Not provided
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Exploration graph snapshot v1 (proposed)",
+  "title": "Exploration graph snapshot v1",
   "description": "Structural validation only; SPEC.md defines graph-wide and state-transition invariants.",
   "type": "object",
   "additionalProperties": false,

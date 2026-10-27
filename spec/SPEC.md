@@ -1,6 +1,6 @@
 # Standalone exploration graph: implementation specification
 
-Status: proposed v0.2, October 27, 2026. This specifies a new implementation inspired by the inspected ARTEX behavior; no library or transport has been implemented. MUST, MUST NOT, and SHOULD express requirements. SQL and JSON files are draft implementation contracts, not proof that the requirements hold.
+Status: normative contract v0.2 approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version), October 27, 2026. The implementation is in the current tree; this document defines its semantic requirements, and its existence does not prove every requirement. MUST, MUST NOT, and SHOULD express requirements. SQL and JSON files are implementation contracts; candidate verification remains in progress. Current implementation status and evidence are tracked in [TASKS.md](../TASKS.md) and [RELEASE-CHECKLIST.md](../docs/RELEASE-CHECKLIST.md).
 
 Read this document for core semantics, [TOOLS.md](TOOLS.md) for agent integration, and [DEVELOPMENT-PLAN.md](DEVELOPMENT-PLAN.md) for delivery order and ownership. `snapshot.schema.json` defines snapshot shape; `tool-contracts.json` defines model-facing inputs. This document governs semantic constraints that schemas cannot express. A conflict between these documents and the schemas is a release blocker, not an invitation for an adapter to choose its own behavior.
 

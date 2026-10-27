@@ -1,6 +1,6 @@
 # Exploration graph tool design package
 
-Proposed contract v0.2 · October 27, 2026
+Normative contract v0.2, approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version) · October 27, 2026. The repository contains the implementation; final candidate verification and release sign-off remain pending. See [TASKS.md](../TASKS.md) and [RELEASE-CHECKLIST.md](../docs/RELEASE-CHECKLIST.md) for current status and evidence.
 
 Start with [the implementation specification](SPEC.md), then [the agent integration contract](TOOLS.md), then [the orchestration game plan](DEVELOPMENT-PLAN.md).
 

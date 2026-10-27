@@ -1,6 +1,6 @@
 # Agent integration contract
 
-Proposed v0.2, October 27, 2026. This is a transport-neutral contract for the tool to be built, not an existing ARTEX or MCP API. Core semantics are in SPEC.md. Machine-readable model inputs are in tool-contracts.json. Treat draft contract version 0.2 as unstable until gate G0 in DEVELOPMENT-PLAN.md.
+Normative tool contract v0.2, approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version), October 27, 2026. This is the transport-neutral contract implemented by the current toolkit, not an ARTEX or generic MCP API. Core semantics are in SPEC.md; machine-readable model inputs are in tool-contracts.json. Candidate verification remains in progress; see [TASKS.md](../TASKS.md) and [RELEASE-CHECKLIST.md](../docs/RELEASE-CHECKLIST.md) for current implementation status and evidence.
 
 ## Two interfaces, one command service
 

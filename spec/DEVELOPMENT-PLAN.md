@@ -1,6 +1,6 @@
 # Exploration graph tool: orchestration game plan
 
-Planning baseline: October 27, 2026; proposed contract v0.2. This plan does not launch agents or start implementation. Deliverables currently present are specifications, proposed schemas, and schema checks only.
+Planning baseline: October 27, 2026; contract v0.2 is approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version). The plan records the original work sequence and acceptance gates; implementation is now present in the repository. Final candidate verification and release sign-off remain pending. Current implementation status and evidence are tracked in [TASKS.md](../TASKS.md) and [RELEASE-CHECKLIST.md](../docs/RELEASE-CHECKLIST.md).
 
 ## Delivery objective
 
