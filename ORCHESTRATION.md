@@ -12,6 +12,8 @@ Current code freeze: `ba4769a5c0692eba96b7f41d99e928f130030316`. All bounded imp
 
 Matrix result: both handles above are terminal. Go1.27.3 passed164 tests; Go1.25.0 failed malformed bracketed IPv6 conformance. `/root/boundary_tests` is active on shared stable URI format validation; `/root/release_environment` assists targeted native compiler checks, not a new full run yet. Final auditor ended with explicit NO-GO for this exact-source failure. Preserve old results; do not reuse the conditional GO as final approval.
 
+Latest checkpoint: URI compatibility correction committed as `62c083f422be2f25e538724179c9fa142bd17e91`; focused native race checks pass on both compilers. Corrected-source full clean runs are live as Go1.25.0 session54818 (`.local/clean-environment/20261027T173045Z-62c083f422be-go1.25.0-344721/`) and Go1.27.3 session84590 (`.local/clean-environment/20261027T173044Z-62c083f422be-go1.27.3-344709/`). Source archive SHA256: `59abb2201ac460539ae793050627c7691052f29a9eb18a2ec0e545d650df24f9`. Runtime jobs continue independently while models defer at88%usage. Next reported reset:2026-10-27 18:11:34 America/New_York; heartbeat now checks hourly at minute15. Inspect these exact live/terminal handles and durable logs before any restart. Implementation agents are ending their turns; no final pass or release claim is made yet.
+
 The resumed Codex thread inspected HEAD 93e054b and preserved all intervening Cursor commits. Its prior three Codex agent handles are terminal usage-limit errors; none was restarted. Actual usage now permits work. The user-authorized heartbeat remains active in this thread despite the historical handoff note below.
 
 - `/root/release_environment` — gpt-6.1-sol/high; owns scripts/ and CI environment work plus docs/CLEAN-ENVIRONMENT.md. Verifies native Linux race detector, minimum compiler, and fresh-source install using WSL2 without publication.
@@ -20,7 +22,7 @@ The resumed Codex thread inspected HEAD 93e054b and preserved all intervening Cu
 
 Completed in the latest reset window: boundary_tests typed-UUID snapshot normalization; resume_fixture (sol/medium) literal two-stage14-event direct/MCP/Python verification; release_metadata (luna/high) approved contract0.2 and source-candidate0.2.0 docs. Root independently reran Host/UUID conformance and example/stdio tests. Earlier broad source review need not be repeated; final auditor verified the changed assertions and found no remaining behavior gap.
 
-Root owns commits, current logs, release-checklist updates, and final sign-off. Existing code and documented gates are authoritative; remaining work must be proven rather than reimplemented. No remote publication is authorized or necessary for local environment verification.
+Root owns commits, current logs, release-checklist updates, and final sign-off. Existing code and documented gates are authoritative; remaining work must be proven rather than reimplemented. No remote publication is authorized or necessary for local environment verification. On recovery, reconcile historical assignment bullets with the latest checkpoint paragraph; completed jobs/agents must not be relaunched merely because a prior observation timed out.
 
 ### Historical Cursor handoff
 

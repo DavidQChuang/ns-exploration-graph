@@ -61,3 +61,19 @@ Retained evidence directories (relative to the repository; ignored):
 - `.local/clean-environment/20261027T171920Z-ba4769a5c069-go1.27.3-299155/` — successful patched-compiler run.
 
 Both retain `source.tar`, `source.sha256`, `environment.txt`, `provision.log`, `verification.log`, `postgres.log` and `evidence/race-tests.jsonl`. The successful lane additionally retains `evidence/stdio-tests.log`, all three example reports, Python transcript and `govulncheck.log`. Containers, anonymous database volumes and private networks were removed after both commands finished. Hosted Actions remains unexecuted; final minimum-compiler compatibility needs a correction and another recorded run.
+
+## Focused URI correction check (2026-10-27)
+
+Before committing the correction, diagnostic source copies overlaid the seven ready implementation/test files (`spec/contracts.go`, `spec/contracts_test.go`, new `spec/uri_test.go`, `graph/snapshot.go`, `graph/conformance/suite.go`, `toolkit/contracts.go`, `toolkit/boundaries_test.go`) on an archived source baseline. Both native compiler lanes exited 0 under the race detector with fresh PostgreSQL and caches. Each passed the 27 named cases in `TestURIIPLiteralFormatStableAcrossCompilers`, `TestURIFormatsMatchHostAndSnapshot` on memory and PostgreSQL, and the exact memory/PostgreSQL `HostResourceURIsMatchPortableContract` subtest. The initial broad unit-test selector found no standalone graph URI/resource test; the separately selected conformance subtests did execute and pass.
+
+Commands inside each diagnostic runner:
+
+```sh
+go test -race -count=1 -v -run 'URI|Resource' ./spec ./toolkit ./graph
+go test -race -count=1 -v -run '^TestMemoryConformance$/^HostResourceURIsMatchPortableContract$' ./graph
+go test -race -count=1 -v -run '^TestPostgresConformance$/^HostResourceURIsMatchPortableContract$' ./graph/store/postgres
+```
+
+Evidence: `.local/uri-go1.25.0-20261027T172839Z-332616/` and `.local/uri-go1.27.3-20261027T172840Z-332706/`, containing source copies, baseline revision, `overlay.sha256`, `verification.log`, PostgreSQL log and exit result. These targeted worktree-overlay checks establish the correction's focused behavior; they do not replace the full matrix on the next committed candidate. The shared assertion makes IP-literal/authority handling consistent across compilers while retaining existing opaque/custom-scheme parsing behavior; it is not a claim of a complete strict RFC parser.
+
+The diagnostic baseline was `bbabbe6b10c217dfc46f95f6e2a1afe3b09fc0bb`; each log contains **35 test/subtest passes, 0 failures and 0 skips** across the focused commands above.
