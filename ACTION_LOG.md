@@ -22,3 +22,6 @@
 - Core behavioral checkpoint committed as 3232a11.
 - Root independently ran real PostgreSQL suite with GRAPH_REQUIRE_POSTGRES=1: PASS restart/lost response, five transactional rollback injection points, simultaneous claims, concurrent dependency cycle rejection, concurrent creation, and shared conformance. G1 marked complete. Portable PostgreSQL 17.11 runs on loopback port 55439; reproducible commands are in docs/POSTGRES-VERIFICATION.md.
 - Usage recheck after G1: 51% five-hour used, 8% weekly used. Remaining agents continue bounded checkpoints; no reset credits consumed by orchestration.
+- PostgreSQL checkpoint committed as b5d2f53.
+- Root reran direct toolkit tests: PASS strict input/output validation, permissions and trusted worker binding; MCP server/CLI compile but protocol tests not yet present. Committing adapter foundation without claiming G4/G5 complete. Official MCP Go SDK pinned to v1.8.0 and raises module minimum to Go 1.25.
+- Approved semantic clarification: a retracted observation revision need not duplicate prior resource evidence; active observation revisions still require evidence, and original references remain historical.

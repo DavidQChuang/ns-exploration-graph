@@ -1,7 +1,7 @@
 {
   "contract_version": "0.2",
   "status": "proposed",
-  "description": "Transport-neutral model input schemas. This manifest is not itself an MCP protocol message. Host context and output semantics are specified in TOOLS.md.",
+  "description": "Transport-neutral strict model input and result envelope schemas. Trusted context is host-owned.",
   "tools": [
     {
       "name": "graph_overview",
@@ -18,6 +18,894 @@
           }
         },
         "required": []
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": true
+              },
+              "graph_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "$ref": "#/$defs/context_node"
+                  },
+                  "goals": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/context_node"
+                    }
+                  },
+                  "work": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/context_node"
+                    }
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/context_node"
+                    }
+                  },
+                  "hints": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/context_node"
+                    }
+                  },
+                  "edges": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/edge"
+                    }
+                  },
+                  "totals": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "origin": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "goal": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "work_item": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "observation": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "conclusion": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "hint": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "edges": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "origin",
+                      "goal",
+                      "work_item",
+                      "observation",
+                      "conclusion",
+                      "hint",
+                      "edges"
+                    ]
+                  },
+                  "omitted": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "origin": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "goal": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "work_item": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "observation": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "conclusion": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "hint": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "edges": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "origin",
+                      "goal",
+                      "work_item",
+                      "observation",
+                      "conclusion",
+                      "hint",
+                      "edges"
+                    ]
+                  },
+                  "truncated": {
+                    "type": "boolean"
+                  },
+                  "retrieval": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "get_node": {
+                        "const": "graph_get_node"
+                      },
+                      "list_nodes": {
+                        "const": "graph_list_nodes"
+                      },
+                      "snapshot": {
+                        "const": "host_snapshot"
+                      }
+                    },
+                    "required": [
+                      "get_node",
+                      "list_nodes",
+                      "snapshot"
+                    ]
+                  }
+                },
+                "required": [
+                  "origin",
+                  "goals",
+                  "work",
+                  "evidence",
+                  "hints",
+                  "edges",
+                  "totals",
+                  "omitted",
+                  "truncated",
+                  "retrieval"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "graph_revision",
+              "data"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "invalid_argument",
+                      "not_found",
+                      "permission_denied",
+                      "revision_conflict",
+                      "invalid_transition",
+                      "invalid_relation",
+                      "cycle_detected",
+                      "stale_evidence",
+                      "stale_execution",
+                      "idempotency_conflict",
+                      "already_exists",
+                      "graph_read_only",
+                      "budget_too_small",
+                      "stale_cursor",
+                      "limit_exceeded",
+                      "storage_unavailable"
+                    ]
+                  },
+                  "message": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "error"
+            ]
+          }
+        ],
+        "$defs": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "state",
+              "title",
+              "payload",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "originPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "request"
+            ],
+            "properties": {
+              "request": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "goalPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "acceptance_criteria"
+            ],
+            "properties": {
+              "acceptance_criteria": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "workPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction",
+              "priority"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "owner_ref": {
+                "type": "string"
+              },
+              "execution_id": {
+                "$ref": "#/$defs/id"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "evidencePayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement",
+              "epistemic_status"
+            ],
+            "properties": {
+              "statement": {
+                "$ref": "#/$defs/text"
+              },
+              "epistemic_status": {
+                "enum": [
+                  "observed",
+                  "inferred",
+                  "reported"
+                ]
+              },
+              "polarity": {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "evidence": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "hintPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "edge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source_id",
+              "target_id",
+              "relation",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_id": {
+                "$ref": "#/$defs/id"
+              },
+              "target_id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "target_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "relation": {
+                "enum": [
+                  "spawns",
+                  "derived_from",
+                  "yields",
+                  "supports",
+                  "depends_on"
+                ]
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            },
+            "if": {
+              "properties": {
+                "relation": {
+                  "const": "depends_on"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "source_revision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "target_revision"
+                    ]
+                  }
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "source_revision",
+                "target_revision"
+              ]
+            }
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "node_id",
+              "node_revision",
+              "resource_type",
+              "uri",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "resource_type": {
+                "$ref": "#/$defs/text"
+              },
+              "uri": {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              "external_revision": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "context_node": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              },
+              "payload": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness",
+              "payload"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/originPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/goalPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/workPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/hintPayload"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -47,6 +935,964 @@
         "required": [
           "node_id"
         ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": true
+              },
+              "graph_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "kind": {
+                    "enum": [
+                      "origin",
+                      "goal",
+                      "work_item",
+                      "observation",
+                      "conclusion",
+                      "hint"
+                    ]
+                  },
+                  "current_revision": {
+                    "$ref": "#/$defs/version"
+                  },
+                  "node": {
+                    "$ref": "#/$defs/revision"
+                  },
+                  "freshness": {
+                    "enum": [
+                      "fresh",
+                      "stale",
+                      "not_applicable"
+                    ]
+                  },
+                  "edges": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/edge"
+                    }
+                  },
+                  "resource_refs": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/resource"
+                    }
+                  },
+                  "total_related": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "omitted_related": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "next_related_cursor": {
+                    "$ref": "#/$defs/text"
+                  }
+                },
+                "required": [
+                  "id",
+                  "kind",
+                  "current_revision",
+                  "node",
+                  "freshness",
+                  "edges",
+                  "resource_refs",
+                  "total_related",
+                  "omitted_related"
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "kind": {
+                          "const": "origin"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "node": {
+                          "properties": {
+                            "state": {
+                              "enum": [
+                                "recorded"
+                              ]
+                            },
+                            "payload": {
+                              "$ref": "#/$defs/originPayload"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "kind": {
+                          "const": "goal"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "node": {
+                          "properties": {
+                            "state": {
+                              "enum": [
+                                "open",
+                                "met",
+                                "abandoned",
+                                "needs_review"
+                              ]
+                            },
+                            "payload": {
+                              "$ref": "#/$defs/goalPayload"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "kind": {
+                          "const": "work_item"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "node": {
+                          "properties": {
+                            "state": {
+                              "enum": [
+                                "open",
+                                "running",
+                                "paused",
+                                "done",
+                                "blocked",
+                                "exhausted",
+                                "stopped"
+                              ]
+                            },
+                            "payload": {
+                              "$ref": "#/$defs/workPayload"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "kind": {
+                          "const": "observation"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "node": {
+                          "properties": {
+                            "state": {
+                              "enum": [
+                                "active",
+                                "retracted"
+                              ]
+                            },
+                            "payload": {
+                              "$ref": "#/$defs/evidencePayload"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "kind": {
+                          "const": "conclusion"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "node": {
+                          "properties": {
+                            "state": {
+                              "enum": [
+                                "active",
+                                "retracted"
+                              ]
+                            },
+                            "payload": {
+                              "$ref": "#/$defs/evidencePayload"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "kind": {
+                          "const": "hint"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "node": {
+                          "properties": {
+                            "state": {
+                              "enum": [
+                                "active",
+                                "consumed"
+                              ]
+                            },
+                            "payload": {
+                              "$ref": "#/$defs/hintPayload"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "graph_revision",
+              "data"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "invalid_argument",
+                      "not_found",
+                      "permission_denied",
+                      "revision_conflict",
+                      "invalid_transition",
+                      "invalid_relation",
+                      "cycle_detected",
+                      "stale_evidence",
+                      "stale_execution",
+                      "idempotency_conflict",
+                      "already_exists",
+                      "graph_read_only",
+                      "budget_too_small",
+                      "stale_cursor",
+                      "limit_exceeded",
+                      "storage_unavailable"
+                    ]
+                  },
+                  "message": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "error"
+            ]
+          }
+        ],
+        "$defs": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "state",
+              "title",
+              "payload",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "originPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "request"
+            ],
+            "properties": {
+              "request": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "goalPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "acceptance_criteria"
+            ],
+            "properties": {
+              "acceptance_criteria": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "workPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction",
+              "priority"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "owner_ref": {
+                "type": "string"
+              },
+              "execution_id": {
+                "$ref": "#/$defs/id"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "evidencePayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement",
+              "epistemic_status"
+            ],
+            "properties": {
+              "statement": {
+                "$ref": "#/$defs/text"
+              },
+              "epistemic_status": {
+                "enum": [
+                  "observed",
+                  "inferred",
+                  "reported"
+                ]
+              },
+              "polarity": {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "evidence": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "hintPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "edge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source_id",
+              "target_id",
+              "relation",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_id": {
+                "$ref": "#/$defs/id"
+              },
+              "target_id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "target_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "relation": {
+                "enum": [
+                  "spawns",
+                  "derived_from",
+                  "yields",
+                  "supports",
+                  "depends_on"
+                ]
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            },
+            "if": {
+              "properties": {
+                "relation": {
+                  "const": "depends_on"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "source_revision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "target_revision"
+                    ]
+                  }
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "source_revision",
+                "target_revision"
+              ]
+            }
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "node_id",
+              "node_revision",
+              "resource_type",
+              "uri",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "resource_type": {
+                "$ref": "#/$defs/text"
+              },
+              "uri": {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              "external_revision": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "context_node": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              },
+              "payload": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness",
+              "payload"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/originPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/goalPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/workPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/hintPayload"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -97,6 +1943,762 @@
           }
         },
         "required": []
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": true
+              },
+              "graph_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "nodes": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/summary"
+                    }
+                  },
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "omitted": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "next_cursor": {
+                    "$ref": "#/$defs/text"
+                  }
+                },
+                "required": [
+                  "nodes",
+                  "total",
+                  "omitted"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "graph_revision",
+              "data"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "invalid_argument",
+                      "not_found",
+                      "permission_denied",
+                      "revision_conflict",
+                      "invalid_transition",
+                      "invalid_relation",
+                      "cycle_detected",
+                      "stale_evidence",
+                      "stale_execution",
+                      "idempotency_conflict",
+                      "already_exists",
+                      "graph_read_only",
+                      "budget_too_small",
+                      "stale_cursor",
+                      "limit_exceeded",
+                      "storage_unavailable"
+                    ]
+                  },
+                  "message": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "error"
+            ]
+          }
+        ],
+        "$defs": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "state",
+              "title",
+              "payload",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "originPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "request"
+            ],
+            "properties": {
+              "request": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "goalPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "acceptance_criteria"
+            ],
+            "properties": {
+              "acceptance_criteria": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "workPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction",
+              "priority"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "owner_ref": {
+                "type": "string"
+              },
+              "execution_id": {
+                "$ref": "#/$defs/id"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "evidencePayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement",
+              "epistemic_status"
+            ],
+            "properties": {
+              "statement": {
+                "$ref": "#/$defs/text"
+              },
+              "epistemic_status": {
+                "enum": [
+                  "observed",
+                  "inferred",
+                  "reported"
+                ]
+              },
+              "polarity": {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "evidence": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "hintPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "edge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source_id",
+              "target_id",
+              "relation",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_id": {
+                "$ref": "#/$defs/id"
+              },
+              "target_id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "target_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "relation": {
+                "enum": [
+                  "spawns",
+                  "derived_from",
+                  "yields",
+                  "supports",
+                  "depends_on"
+                ]
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            },
+            "if": {
+              "properties": {
+                "relation": {
+                  "const": "depends_on"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "source_revision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "target_revision"
+                    ]
+                  }
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "source_revision",
+                "target_revision"
+              ]
+            }
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "node_id",
+              "node_revision",
+              "resource_type",
+              "uri",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "resource_type": {
+                "$ref": "#/$defs/text"
+              },
+              "uri": {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              "external_revision": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "context_node": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              },
+              "payload": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness",
+              "payload"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/originPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/goalPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/workPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/hintPayload"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -154,6 +2756,757 @@
           "instruction",
           "priority"
         ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": true
+              },
+              "graph_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "work_item_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "node_revision": {
+                    "$ref": "#/$defs/version"
+                  },
+                  "lineage_edge_ids": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    }
+                  }
+                },
+                "required": [
+                  "work_item_id",
+                  "node_revision",
+                  "lineage_edge_ids"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "graph_revision",
+              "data"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "invalid_argument",
+                      "not_found",
+                      "permission_denied",
+                      "revision_conflict",
+                      "invalid_transition",
+                      "invalid_relation",
+                      "cycle_detected",
+                      "stale_evidence",
+                      "stale_execution",
+                      "idempotency_conflict",
+                      "already_exists",
+                      "graph_read_only",
+                      "budget_too_small",
+                      "stale_cursor",
+                      "limit_exceeded",
+                      "storage_unavailable"
+                    ]
+                  },
+                  "message": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "error"
+            ]
+          }
+        ],
+        "$defs": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "state",
+              "title",
+              "payload",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "originPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "request"
+            ],
+            "properties": {
+              "request": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "goalPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "acceptance_criteria"
+            ],
+            "properties": {
+              "acceptance_criteria": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "workPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction",
+              "priority"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "owner_ref": {
+                "type": "string"
+              },
+              "execution_id": {
+                "$ref": "#/$defs/id"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "evidencePayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement",
+              "epistemic_status"
+            ],
+            "properties": {
+              "statement": {
+                "$ref": "#/$defs/text"
+              },
+              "epistemic_status": {
+                "enum": [
+                  "observed",
+                  "inferred",
+                  "reported"
+                ]
+              },
+              "polarity": {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "evidence": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "hintPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "edge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source_id",
+              "target_id",
+              "relation",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_id": {
+                "$ref": "#/$defs/id"
+              },
+              "target_id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "target_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "relation": {
+                "enum": [
+                  "spawns",
+                  "derived_from",
+                  "yields",
+                  "supports",
+                  "depends_on"
+                ]
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            },
+            "if": {
+              "properties": {
+                "relation": {
+                  "const": "depends_on"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "source_revision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "target_revision"
+                    ]
+                  }
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "source_revision",
+                "target_revision"
+              ]
+            }
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "node_id",
+              "node_revision",
+              "resource_type",
+              "uri",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "resource_type": {
+                "$ref": "#/$defs/text"
+              },
+              "uri": {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              "external_revision": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "context_node": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              },
+              "payload": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness",
+              "payload"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/originPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/goalPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/workPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/hintPayload"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -239,6 +3592,761 @@
           "evidence",
           "epistemic_status"
         ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": true
+              },
+              "graph_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "observation_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "node_revision": {
+                    "$ref": "#/$defs/version"
+                  },
+                  "yields_edge_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "resource_reference_ids": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    }
+                  }
+                },
+                "required": [
+                  "observation_id",
+                  "node_revision",
+                  "yields_edge_id",
+                  "resource_reference_ids"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "graph_revision",
+              "data"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "invalid_argument",
+                      "not_found",
+                      "permission_denied",
+                      "revision_conflict",
+                      "invalid_transition",
+                      "invalid_relation",
+                      "cycle_detected",
+                      "stale_evidence",
+                      "stale_execution",
+                      "idempotency_conflict",
+                      "already_exists",
+                      "graph_read_only",
+                      "budget_too_small",
+                      "stale_cursor",
+                      "limit_exceeded",
+                      "storage_unavailable"
+                    ]
+                  },
+                  "message": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "error"
+            ]
+          }
+        ],
+        "$defs": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "state",
+              "title",
+              "payload",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "originPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "request"
+            ],
+            "properties": {
+              "request": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "goalPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "acceptance_criteria"
+            ],
+            "properties": {
+              "acceptance_criteria": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "workPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction",
+              "priority"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "owner_ref": {
+                "type": "string"
+              },
+              "execution_id": {
+                "$ref": "#/$defs/id"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "evidencePayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement",
+              "epistemic_status"
+            ],
+            "properties": {
+              "statement": {
+                "$ref": "#/$defs/text"
+              },
+              "epistemic_status": {
+                "enum": [
+                  "observed",
+                  "inferred",
+                  "reported"
+                ]
+              },
+              "polarity": {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "evidence": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "hintPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "edge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source_id",
+              "target_id",
+              "relation",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_id": {
+                "$ref": "#/$defs/id"
+              },
+              "target_id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "target_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "relation": {
+                "enum": [
+                  "spawns",
+                  "derived_from",
+                  "yields",
+                  "supports",
+                  "depends_on"
+                ]
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            },
+            "if": {
+              "properties": {
+                "relation": {
+                  "const": "depends_on"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "source_revision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "target_revision"
+                    ]
+                  }
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "source_revision",
+                "target_revision"
+              ]
+            }
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "node_id",
+              "node_revision",
+              "resource_type",
+              "uri",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "resource_type": {
+                "$ref": "#/$defs/text"
+              },
+              "uri": {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              "external_revision": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "context_node": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              },
+              "payload": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness",
+              "payload"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/originPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/goalPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/workPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/hintPayload"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -338,6 +4446,767 @@
           "epistemic_status",
           "supports"
         ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": true
+              },
+              "graph_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "conclusion_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "node_revision": {
+                    "$ref": "#/$defs/version"
+                  },
+                  "support_edge_ids": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    }
+                  },
+                  "resource_reference_ids": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    }
+                  },
+                  "yields_edge_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "conclusion_id",
+                  "node_revision",
+                  "support_edge_ids",
+                  "resource_reference_ids"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "graph_revision",
+              "data"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "invalid_argument",
+                      "not_found",
+                      "permission_denied",
+                      "revision_conflict",
+                      "invalid_transition",
+                      "invalid_relation",
+                      "cycle_detected",
+                      "stale_evidence",
+                      "stale_execution",
+                      "idempotency_conflict",
+                      "already_exists",
+                      "graph_read_only",
+                      "budget_too_small",
+                      "stale_cursor",
+                      "limit_exceeded",
+                      "storage_unavailable"
+                    ]
+                  },
+                  "message": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "error"
+            ]
+          }
+        ],
+        "$defs": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "state",
+              "title",
+              "payload",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "originPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "request"
+            ],
+            "properties": {
+              "request": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "goalPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "acceptance_criteria"
+            ],
+            "properties": {
+              "acceptance_criteria": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "workPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction",
+              "priority"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "owner_ref": {
+                "type": "string"
+              },
+              "execution_id": {
+                "$ref": "#/$defs/id"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "evidencePayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement",
+              "epistemic_status"
+            ],
+            "properties": {
+              "statement": {
+                "$ref": "#/$defs/text"
+              },
+              "epistemic_status": {
+                "enum": [
+                  "observed",
+                  "inferred",
+                  "reported"
+                ]
+              },
+              "polarity": {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "evidence": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "hintPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "edge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source_id",
+              "target_id",
+              "relation",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_id": {
+                "$ref": "#/$defs/id"
+              },
+              "target_id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "target_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "relation": {
+                "enum": [
+                  "spawns",
+                  "derived_from",
+                  "yields",
+                  "supports",
+                  "depends_on"
+                ]
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            },
+            "if": {
+              "properties": {
+                "relation": {
+                  "const": "depends_on"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "source_revision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "target_revision"
+                    ]
+                  }
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "source_revision",
+                "target_revision"
+              ]
+            }
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "node_id",
+              "node_revision",
+              "resource_type",
+              "uri",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "resource_type": {
+                "$ref": "#/$defs/text"
+              },
+              "uri": {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              "external_revision": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "context_node": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              },
+              "payload": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness",
+              "payload"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/originPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/goalPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/workPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/hintPayload"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -393,6 +5262,746 @@
           "source",
           "target"
         ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": true
+              },
+              "graph_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "edge_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "edge_id"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "graph_revision",
+              "data"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "invalid_argument",
+                      "not_found",
+                      "permission_denied",
+                      "revision_conflict",
+                      "invalid_transition",
+                      "invalid_relation",
+                      "cycle_detected",
+                      "stale_evidence",
+                      "stale_execution",
+                      "idempotency_conflict",
+                      "already_exists",
+                      "graph_read_only",
+                      "budget_too_small",
+                      "stale_cursor",
+                      "limit_exceeded",
+                      "storage_unavailable"
+                    ]
+                  },
+                  "message": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "error"
+            ]
+          }
+        ],
+        "$defs": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "state",
+              "title",
+              "payload",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "originPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "request"
+            ],
+            "properties": {
+              "request": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "goalPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "acceptance_criteria"
+            ],
+            "properties": {
+              "acceptance_criteria": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "workPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction",
+              "priority"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "owner_ref": {
+                "type": "string"
+              },
+              "execution_id": {
+                "$ref": "#/$defs/id"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "evidencePayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement",
+              "epistemic_status"
+            ],
+            "properties": {
+              "statement": {
+                "$ref": "#/$defs/text"
+              },
+              "epistemic_status": {
+                "enum": [
+                  "observed",
+                  "inferred",
+                  "reported"
+                ]
+              },
+              "polarity": {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "evidence": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "hintPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "edge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source_id",
+              "target_id",
+              "relation",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_id": {
+                "$ref": "#/$defs/id"
+              },
+              "target_id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "target_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "relation": {
+                "enum": [
+                  "spawns",
+                  "derived_from",
+                  "yields",
+                  "supports",
+                  "depends_on"
+                ]
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            },
+            "if": {
+              "properties": {
+                "relation": {
+                  "const": "depends_on"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "source_revision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "target_revision"
+                    ]
+                  }
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "source_revision",
+                "target_revision"
+              ]
+            }
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "node_id",
+              "node_revision",
+              "resource_type",
+              "uri",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "resource_type": {
+                "$ref": "#/$defs/text"
+              },
+              "uri": {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              "external_revision": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "context_node": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              },
+              "payload": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness",
+              "payload"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/originPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/goalPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/workPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/hintPayload"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -445,6 +6054,771 @@
           "support_edge_ids",
           "rationale"
         ]
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": true
+              },
+              "graph_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "acceptance_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "resulting_goal_revision": {
+                    "$ref": "#/$defs/version"
+                  },
+                  "reviewed_evidence": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/ref"
+                    }
+                  },
+                  "support_edge_ids": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    }
+                  },
+                  "reviewed_resource_ids": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    }
+                  }
+                },
+                "required": [
+                  "acceptance_id",
+                  "resulting_goal_revision",
+                  "reviewed_evidence",
+                  "support_edge_ids",
+                  "reviewed_resource_ids"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "graph_revision",
+              "data"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ok": {
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "invalid_argument",
+                      "not_found",
+                      "permission_denied",
+                      "revision_conflict",
+                      "invalid_transition",
+                      "invalid_relation",
+                      "cycle_detected",
+                      "stale_evidence",
+                      "stale_execution",
+                      "idempotency_conflict",
+                      "already_exists",
+                      "graph_read_only",
+                      "budget_too_small",
+                      "stale_cursor",
+                      "limit_exceeded",
+                      "storage_unavailable"
+                    ]
+                  },
+                  "message": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "error"
+            ]
+          }
+        ],
+        "$defs": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "state",
+              "title",
+              "payload",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "originPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "request"
+            ],
+            "properties": {
+              "request": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "goalPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "acceptance_criteria"
+            ],
+            "properties": {
+              "acceptance_criteria": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "workPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction",
+              "priority"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "owner_ref": {
+                "type": "string"
+              },
+              "execution_id": {
+                "$ref": "#/$defs/id"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "evidencePayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement",
+              "epistemic_status"
+            ],
+            "properties": {
+              "statement": {
+                "$ref": "#/$defs/text"
+              },
+              "epistemic_status": {
+                "enum": [
+                  "observed",
+                  "inferred",
+                  "reported"
+                ]
+              },
+              "polarity": {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "neutral"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "evidence": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "hintPayload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction"
+            ],
+            "properties": {
+              "instruction": {
+                "$ref": "#/$defs/text"
+              },
+              "extensions": {
+                "type": "object"
+              }
+            }
+          },
+          "edge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source_id",
+              "target_id",
+              "relation",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_id": {
+                "$ref": "#/$defs/id"
+              },
+              "target_id": {
+                "$ref": "#/$defs/id"
+              },
+              "source_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "target_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "relation": {
+                "enum": [
+                  "spawns",
+                  "derived_from",
+                  "yields",
+                  "supports",
+                  "depends_on"
+                ]
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            },
+            "if": {
+              "properties": {
+                "relation": {
+                  "const": "depends_on"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "source_revision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "target_revision"
+                    ]
+                  }
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "source_revision",
+                "target_revision"
+              ]
+            }
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "node_id",
+              "node_revision",
+              "resource_type",
+              "uri",
+              "actor_id",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_id": {
+                "$ref": "#/$defs/id"
+              },
+              "node_revision": {
+                "$ref": "#/$defs/version"
+              },
+              "resource_type": {
+                "$ref": "#/$defs/text"
+              },
+              "uri": {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              "external_revision": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "actor_id": {
+                "$ref": "#/$defs/text"
+              },
+              "created_at": {
+                "$ref": "#/$defs/time"
+              }
+            }
+          },
+          "ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "context_node": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "origin",
+                  "goal",
+                  "work_item",
+                  "observation",
+                  "conclusion",
+                  "hint"
+                ]
+              },
+              "revision": {
+                "$ref": "#/$defs/version"
+              },
+              "state": {
+                "$ref": "#/$defs/text"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "freshness": {
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "not_applicable"
+                ]
+              },
+              "payload": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "revision",
+              "state",
+              "title",
+              "freshness",
+              "payload"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "origin"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "recorded"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/originPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "goal"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "met",
+                        "abandoned",
+                        "needs_review"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/goalPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "work_item"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "open",
+                        "running",
+                        "paused",
+                        "done",
+                        "blocked",
+                        "exhausted",
+                        "stopped"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/workPayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "observation"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "conclusion"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "retracted"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/evidencePayload"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "hint"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "active",
+                        "consumed"
+                      ]
+                    },
+                    "payload": {
+                      "$ref": "#/$defs/hintPayload"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
       }
     }
   ],
