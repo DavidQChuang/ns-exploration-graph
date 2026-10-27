@@ -48,3 +48,5 @@
 - Committed the lane as 7fa9d4f. Decision 004 is the scoped-read and request-scoped idempotency extension. Traversal and GetNode remain O(nodes+edges); that limit is written in docs/POSTGRES-VERIFICATION.md and is not treated as solved.
 - Root then closed the SPEC violation that storage errors echoed driver text. `TestStorageErrorsHideDriverText` passed against PostgreSQL 17.11. Commit follows this log entry; decisions 005 (graph-mcp `-acceptance`) and 006 (fixed storage message) are in docs/DECISIONS.md.
 - Next: independent correctness review of the committed tree. Release-checklist boxes stay unchecked until that review and a checklist audit record evidence. GitHub Actions has still not run.
+
+- Started reviewer (agent 35e7e671, claude-opus-5-5-medium) read-only against the committed tree. It does not edit or commit.
