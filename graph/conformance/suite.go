@@ -526,7 +526,7 @@ func runHostLifecycle(t *testing.T, newStore func(t *testing.T) graph.Store) {
 		producer, wc := w.running("Probe", 1)
 		oid := w.observe(wc, "Observed", "Measured")
 		valid := graph.ResourceInput{ResourceType: "log", URI: "urn:log:valid%20escaped"}
-		for _, uri := range []string{"http://[not-ipv6]/log", "http://::1/log", "https://example.com/%zz", "relative/log", "urn:log:\ncontrol"} {
+		for _, uri := range []string{"http://[not-ipv6]/log", "http://::1/log", "http://[192.0.2.1]/log", "http://[fe80::1%25eth0]/log", "http://[vG.name]/log", "http://[::1]host/log", "http://[::1]@example.com/log", "https://example.com/%zz", "relative/log", "urn:log:\ncontrol"} {
 			for _, command := range []string{"RecordObservation", "RecordConclusion", "AttachResource"} {
 				before := w.snapshot()
 				c := w.next()
@@ -554,6 +554,13 @@ func runHostLifecycle(t *testing.T, newStore func(t *testing.T) graph.Store) {
 				assertBoundaryUnchanged(t, w, before)
 				w.must(w.s.AttachResource(w.ctx, c, graph.AttachResourceInput{Node: graph.Ref{NodeID: oid, Revision: 1}, Resource: valid}))
 			}
+		}
+		for _, uri := range []string{"http://[2001:db8::1]:80/log", "http://[::ffff:192.0.2.1]/log", "https://user%40name:password@[::1]:443/log", "http://[v1.host]/log", "custom://[VF.a:b!$&'()*+,;=~]:80/log", "file:///tmp/log.txt", "artex://assets/123"} {
+			resource := valid
+			resource.URI = uri
+			w.observe(wc, "Valid resource", "Measured", resource)
+			w.must(w.s.RecordConclusion(w.ctx, w.next(), graph.RecordConclusionInput{Title: "Valid resource", EvidencePayload: graph.EvidencePayload{Statement: "Measured", EpistemicStatus: "inferred"}, Supports: []graph.Ref{{NodeID: oid, Revision: 1}}, Resources: []graph.ResourceInput{resource}}))
+			w.must(w.s.AttachResource(w.ctx, w.next(), graph.AttachResourceInput{Node: graph.Ref{NodeID: oid, Revision: 1}, Resource: resource}))
 		}
 		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: producer, Revision: 2}, State: "done"}))
 		exported, e := w.s.ExportSnapshot(w.ctx, w.c.Namespace, w.c.GraphID)

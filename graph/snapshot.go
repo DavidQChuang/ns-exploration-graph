@@ -27,7 +27,7 @@ func portableSchema() (*jsonschema.Schema, error) {
 			return
 		}
 		c := jsonschema.NewCompiler()
-		c.AssertFormat()
+		spec.RegisterFormats(c)
 		snapshotSchemaErr = c.AddResource("https://ns-exploration-graph.invalid/snapshot.schema.json", doc)
 		if snapshotSchemaErr == nil {
 			snapshotSchema, snapshotSchemaErr = c.Compile("https://ns-exploration-graph.invalid/snapshot.schema.json")

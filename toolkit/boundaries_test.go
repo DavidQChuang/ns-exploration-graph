@@ -137,3 +137,37 @@ func TestToolResultActual64KiBBoundary(t *testing.T) {
 		}
 	})
 }
+
+func TestURIFormatsMatchHostAndSnapshot(t *testing.T) {
+	eachStore(t, func(t *testing.T, svc *graph.Service) {
+		w := newWorld(t, svc)
+		worker := w.worker(w.claim(w.work("URI probe"), 1))
+		for _, uri := range []string{"http://[2001:db8::1]/log", "http://[::ffff:192.0.2.1]/log", "https://user%40name:password@[::1]:443/log", "http://[v1.host]/log", "custom://[VF.a:b!$&'()*+,;=~]:80/log", "urn:log:valid%20escaped"} {
+			args := obs("URI format")
+			args["resource_refs"] = []any{map[string]any{"resource_type": "log", "uri": uri}}
+			r := ok(t, "graph_record_observation", call(worker, "graph_record_observation", args, graph.NewID()))
+			id := r["observation_id"].(string)
+			out := call(worker, "graph_get_node", map[string]any{"node_id": id}, "")
+			body := ok(t, "graph_get_node", out)
+			if body["resource_refs"].([]any)[0].(map[string]any)["uri"] != uri {
+				t.Fatal("URI validation rewrote opaque resource data")
+			}
+			for _, invalid := range []string{"http://[not-ipv6]/log", "http://::1/log", "http://[192.0.2.1]/log", "http://[fe80::1%25eth0]/log", "http://[vG.name]/log", "http://[::1]host/log", "http://[::1]@example.com/log"} {
+				badArgs := obs("Invalid URI")
+				badArgs["resource_refs"] = []any{map[string]any{"resource_type": "log", "uri": invalid}}
+				before := w.snapshot()
+				wantCode(t, call(worker, "graph_record_observation", badArgs, graph.NewID()), "invalid_argument")
+				if !reflect.DeepEqual(before, w.snapshot()) {
+					t.Fatal("invalid URI tool input changed graph")
+				}
+				// Result validation uses the same format registration as inputs,
+				// preventing a malformed reference from passing on the read path.
+				body["resource_refs"].([]any)[0].(map[string]any)["uri"] = invalid
+				badOutput := toolkit.Envelope{OK: true, GraphRevision: out.GraphRevision, Data: body}
+				if e := toolkit.ValidateOutput("graph_get_node", mustJSON(badOutput)); e == nil {
+					t.Fatalf("output schema accepted URI %q", invalid)
+				}
+			}
+		}
+	})
+}

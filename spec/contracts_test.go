@@ -17,7 +17,7 @@ func compile(t *testing.T) *jsonschema.Schema {
 		t.Fatal(e)
 	}
 	c := jsonschema.NewCompiler()
-	c.AssertFormat() // uuid, uri and date-time are asserted, not just annotated
+	spec.RegisterFormats(c) // uuid, uri and date-time are asserted, not just annotated
 	if e = c.AddResource("https://ns-exploration-graph.invalid/snapshot.schema.json", doc); e != nil {
 		t.Fatal(e)
 	}

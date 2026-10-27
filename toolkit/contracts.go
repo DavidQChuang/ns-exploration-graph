@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"ns-exploration-graph/spec"
 )
 
 //go:embed contracts.json prompts/*.md
@@ -63,7 +64,7 @@ func load() error {
 					return
 				}
 				c := jsonschema.NewCompiler()
-				c.AssertFormat()
+				spec.RegisterFormats(c)
 				u := "https://exploration.invalid/" + d.Name + "/" + direction
 				if e = c.AddResource(u, doc); e != nil {
 					contract.err = e
