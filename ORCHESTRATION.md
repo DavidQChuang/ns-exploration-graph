@@ -10,6 +10,8 @@ Root role: coordinator, integrator, release auditor, and Git committer. Implemen
 
 Current code freeze: `ba4769a5c0692eba96b7f41d99e928f130030316`. All bounded implementation lanes are complete. `/root/release_environment` is verifying this exact source in two isolated native Linux clean/race runs: Go1.25.0 session7825 and Go1.27.3 session45170, recorded under `.local/clean-environment/20261027T171919Z-ba4769a5c069-go1.25.0-299138/` and `20261027T171920Z-ba4769a5c069-go1.27.3-299155/`. `/root/final_release_audit` has conditionally approved the corrected source and is updating requirement evidence; only final matrix results, artifact inspection/checksums, metadata/sign-off remain. Do not relaunch these live runs or expand implementation scope without a reproducible defect.
 
+Matrix result: both handles above are terminal. Go1.27.3 passed164 tests; Go1.25.0 failed malformed bracketed IPv6 conformance. `/root/boundary_tests` is active on shared stable URI format validation; `/root/release_environment` assists targeted native compiler checks, not a new full run yet. Final auditor ended with explicit NO-GO for this exact-source failure. Preserve old results; do not reuse the conditional GO as final approval.
+
 The resumed Codex thread inspected HEAD 93e054b and preserved all intervening Cursor commits. Its prior three Codex agent handles are terminal usage-limit errors; none was restarted. Actual usage now permits work. The user-authorized heartbeat remains active in this thread despite the historical handoff note below.
 
 - `/root/release_environment` — gpt-6.1-sol/high; owns scripts/ and CI environment work plus docs/CLEAN-ENVIRONMENT.md. Verifies native Linux race detector, minimum compiler, and fresh-source install using WSL2 without publication.
