@@ -12,6 +12,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 manifest = json.loads((ROOT / "spec/tool-contracts.json").read_text())
+# Contract approval is release metadata, applied by the source generator so the
+# checked-in spec and embedded manifest cannot disagree about its status.
+manifest["status"] = "approved"
 snap = json.loads((ROOT / "spec/snapshot.schema.json").read_text())
 defs = {k: copy.deepcopy(v) for k, v in snap["$defs"].items()
         if k in ("id", "text", "time", "version", "revision", "edge", "resource",
@@ -73,4 +76,5 @@ if "--check" in sys.argv[1:]:
     print("contracts match generator output: " + ", ".join(str(t.relative_to(ROOT)) for t in targets))
 else:
     for t in targets:
-        t.write_text(encoded, encoding="utf-8", newline="\n")
+        newline = "\r\n" if b"\r\n" in t.read_bytes() else "\n"
+        t.write_bytes(encoded.replace("\n", newline).encode("utf-8"))

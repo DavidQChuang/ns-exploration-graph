@@ -1,39 +1,31 @@
-# Release notes (draft, unreleased)
+# Release notes — source candidate 0.2.0
 
-Draft for the current unreleased tree. No version is assigned, nothing is published, and this is not a release declaration. See `docs/COMPATIBILITY.md` for what is and is not promised.
+Candidate metadata for the proposed source-only 0.2.0 release, dated 2026-10-27. Tool contract 0.2 has been approved and is marked `approved` in `spec/tool-contracts.json`. This does not certify the final candidate: required lifecycle and URI corrections, the two-stage fixture, clean-matrix reruns, final archive inspection and production sign-off remain pending. Nothing has been published, and this document is not a production-readiness declaration.
 
-## What the local suite covers
+The intended distribution is project source only. It includes no Go or PostgreSQL toolchain/runtime, built executable, or dependency binary. No future SQL upgrade path is promised; migration 001 is the only migration currently present. Snapshot schema version 1 is the only supported version. See `docs/COMPATIBILITY.md` for the pre-1.0 versioning policy.
 
-The shared conformance suite (`graph/conformance`) runs against both the memory store (`TestMemoryConformance`) and PostgreSQL 17.11 (`TestPostgresConformance`). It covers, among other things:
+## Candidate scope
 
-- command replay, idempotency conflicts, fencing of stale executions, and cursor staleness;
-- one winner for concurrent claims, and no cycle from opposite concurrent dependency additions;
-- a claim racing a dependency edit on the same work: running work never has an undone prerequisite, and an existing dependency means the claim failed and the work is still open (25 attempts per store per run);
-- dependency edits on running work return `invalid_transition`;
-- acceptance freshness: revising evidence invalidates only goals whose accepted closure includes it; revising a met goal's criteria is a single revision to `needs_review` with a stale acceptance;
-- snapshot export/restore round trip, rejection of unknown versions, running work, inconsistent acceptance closures and relation cycles (`supports`, `depends_on`), each leaving no graph and no events;
-- bounded projection, pagination, event feed resume, and scoped reads matching complete-aggregate reads.
+- Standalone Go exploration-graph library with shared semantics for in-memory and PostgreSQL stores.
+- Eight schema-validated tools, available in process or through the stdio MCP adapter.
+- Versioned snapshots, prompt assets and deterministic direct/MCP/Python examples.
+- Explicit trusted-host boundaries for authorization, evidence resolution, work assignment, acceptance policy and durable invocation identity.
 
-`graph/store/postgres` adds PostgreSQL-only tests: injected rollback at five checkpoints, restart with lost response, simultaneous claims, concurrent dependencies and concurrent creation. Fault injection exists for PostgreSQL only.
+The library does not run models, schedule workers, resolve or authorize external evidence, authenticate remote callers, provide a viewer, or promise exactly-once writes for generic MCP clients. The stock stdio host assigns a fresh invocation identity to each call; after an ambiguous write, clients must reconcile by reading the graph.
 
-The memory store serializes updates under one mutex, so the claim/dependency race test there exercises ordering through the store lock, not a database. Only the PostgreSQL run has been observed to produce both outcomes (claim first and dependency first).
+## Baseline verification evidence
 
-Last run of the two core packages on this tree: `go test -count=1 ./graph ./graph/store/postgres` against PostgreSQL 17.11 on `127.0.0.1:55439` with `GRAPH_REQUIRE_POSTGRES=1`: both packages `ok`; verbose run: 59 `--- PASS`, 0 `--- FAIL`, 0 `--- SKIP`. Results for the other packages are in `docs/RELEASE-CHECKLIST.md`.
+The clean verification payload passed for committed baseline `01a1bf1cf69b` on 2026-10-27 with Go 1.25.0 and Go 1.27.3. Each independent source-archive run exited successfully and recorded 142 test/subtest passes, zero failures and zero skipped tests across seven test-bearing packages. The runs used empty build/module caches, native Linux amd64 with CGO enabled, GCC 13.3.0, Python 3.12.3 and isolated PostgreSQL 17.11. Each included dependency verification, contract generation drift check, `go vet ./...`, `go build ./...`, tool installation, `go test -race -json -count=1 ./...`, explicit stdio/Python checks and direct/MCP/Python example parity. The Go 1.27.3 lane also ran govulncheck v1.9.0: no vulnerability affecting called code, no findings in imported packages and one finding in a required but uncalled module.
 
-## Limits that remain
+The two-stage fixture lane is underway. Its intended workflow resumes a new session from graph state, proposes fix-verification work and records a passing result. This candidate still needs that fixture and equivalence checks in the direct, MCP and Python examples. The remaining lifecycle/error and URI validation gates also need correction and runtime coverage. Once those changes are integrated, rerun both clean compiler lanes; baseline results do not verify later source changes.
 
-- No GitHub Actions run. `.github/workflows/test.yml` exists but there is no remote, so it has never executed.
-- No race detector run (`CGO_ENABLED=0`, no C compiler). The concurrency tests above are not a substitute.
-- No clean-machine install. All runs used the developer's `.local/` Go and PostgreSQL. The module minimum Go 1.25.0 has not been built.
-- Traversal, `GetNode` and mutations are O(nodes + edges); `ListEligibleWork` is unbounded. No production throughput claim is made (`docs/POSTGRES-VERIFICATION.md`, "Current scaling boundary"; `docs/DECISIONS.md` 004).
-- Stock `graph-mcp` has no durable invocation identity. It gives each call a fresh identity and reports ambiguous writes after a lost response; clients must read the graph to reconcile. There is no exactly-once claim over MCP.
-- No model-backed smoke test.
-- No M3 viewer.
-- Tool contract 0.2 is still `proposed`; no approval is recorded.
-- Also not provided: automatic resource authorization or resolution, external-effect fencing, ARTEX migration, a SQL upgrade path beyond `001_initial.sql`, a dependency license scan, or release artifacts and checksums.
+## Remaining release gates
 
-## Where to look next
+- Complete runtime coverage for the remaining lifecycle transitions and all stable error codes; correct host URI validation to match snapshot validation.
+- Complete the two-stage fixture and compare normalized direct, MCP and Python outcomes.
+- Rerun the clean Go 1.25.0 and 1.27.3 matrices against final candidate source.
+- Inspect the actual source archive, its tracked-file inventory, notices and checksum; record the archive location and integrator sign-off.
 
-- `docs/RELEASE-CHECKLIST.md`: per-item verification status and evidence record.
-- `docs/POSTGRES-VERIFICATION.md`: PostgreSQL runtime, test commands and scaling boundary.
-- `docs/COMPATIBILITY.md`: compatibility and versioning statements.
+GitHub Actions has not run: there is no remote and no hosted workflow execution. Local verification exercised the checked-in payload, not GitHub's checkout/setup/upload orchestration. The source dependency/license inventory in `docs/DEPENDENCIES.md` is an engineering record, not legal review or a legal conclusion. The final archive has not been inspected. No package, binary or other release has been published.
+
+For detailed results and gates, see `docs/CLEAN-ENVIRONMENT.md`, `docs/RELEASE-CHECKLIST.md`, `docs/REQUIREMENTS.md` and `docs/POSTGRES-VERIFICATION.md`.

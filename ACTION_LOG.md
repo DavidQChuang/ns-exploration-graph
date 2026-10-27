@@ -95,3 +95,6 @@
 - Root reran the shared Host lifecycle/resource suite on memory and required PostgreSQL: both passed. URI/lifecycle checkpoint and provisional audit mappings are now being committed.
 - Assigned boundary_tests only the uppercase-UUID portability probe; resume_fixture (sol/medium) the literal two-stage parser verification scenario and transport parity; release_metadata (luna/high) candidate docs and approved contract metadata. Final matrix remains deferred until these bounded changes freeze.
 - Integrator approved normative contract0.2/snapshot support{1} for candidate0.2.0 (decision012), with production readiness still conditional on final evidence and artifact inspection.
+- Committed the verified URI/lifecycle checkpoint as12a8cd3 and provisional complete audit mappings as8f8780b.
+- Uppercase snapshot probe confirmed an actual PostgreSQL portability bug: UUID columns canonicalized to lowercase while acceptance JSONB reference arrays retained uppercase, making exported snapshots invalid. Approved typed snapshot-boundary normalization and collision rejection (decision013); no general host-ID alias behavior is added.
+- Candidate metadata agent completed approved contract status generation and source-only0.2.0 candidate/compatibility notes; generator drift and toolkit tests passed. Final runtime sign-off remains pending.

@@ -60,3 +60,7 @@ Host commands validate resource URIs with the same compiled URI fragment and for
 ## 012: Contract freeze and candidate version
 
 The integrator approves normative tool contract 0.2 and snapshot schema support set `{1}` for the source-release candidate 0.2.0. Approval freezes public semantics and metadata; it does not assert that final-candidate verification or artifact sign-off has completed. Changes to released 0.2.x patch versions must preserve those public contracts. Intentional breaking changes require a recorded decision, a new minor contract/release version, migration or compatibility notes, and corresponding fixtures. No remote publication is authorized by this local release preparation.
+
+## 013: Canonical UUID representation at the snapshot boundary
+
+UUID lexical case does not change identity. After structural validation, snapshot validation/restore canonicalizes only contract-defined UUID identities and references to lowercase before semantic checks and persistence, including historical work execution IDs and acceptance closure/resource-reference arrays. This prevents PostgreSQL UUID columns and JSONB references from diverging after a schema-valid uppercase import. Case-alias duplicate identities are rejected before any mutation. Opaque text, resource URIs, actor identities, and extensions are preserved. This is snapshot-boundary normalization; ordinary host APIs continue to expect the exact identifiers returned by the service rather than promising lookup aliases for arbitrary UUID spellings.

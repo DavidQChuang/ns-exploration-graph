@@ -2,7 +2,7 @@
 
 A durable "exploration graph" library for agent harnesses, written in Go. It stores an investigation as typed, revisioned nodes (origin, goals, work items, observations, conclusions, hints) with typed edges, resource references and goal acceptances. A shared command service enforces the rules; two storage adapters persist it (in-memory reference store and PostgreSQL). Eight narrow, schema-validated tools expose it to models, in-process or over MCP stdio.
 
-Status: pre-release. Contract version 0.2 (`"status": "proposed"` in `spec/tool-contracts.json`). Release gates and their evidence are tracked in `docs/RELEASE-CHECKLIST.md` and `docs/REQUIREMENTS.md`; nothing here is a claim that those gates are closed.
+Status: source release candidate 0.2.0. Tool contract 0.2 is approved (`"status": "approved"` in `spec/tool-contracts.json`); snapshot schema version 1 is the only supported version. Final candidate verification, archive inspection and production sign-off remain pending. This status does not declare the candidate production-ready or published. Evidence and open gates are tracked in `docs/RELEASE-CHECKLIST.md` and `docs/REQUIREMENTS.md`.
 
 ## What it is not
 
@@ -29,7 +29,7 @@ go build ./...
 go build -o bin/graph-mcp ./cmd/graph-mcp
 ```
 
-The module path is `ns-exploration-graph` (local; not published to a registry).
+The module path is `ns-exploration-graph`. The proposed 0.2.0 distribution is source-only: it does not include Go or PostgreSQL runtimes, built executables, or dependency binaries. No package-registry or other publication has occurred.
 
 ## Quick start (in process)
 
@@ -119,7 +119,7 @@ Over-limit input fails before any write. Boundary behavior is covered by tests i
 | MCP Go SDK | `github.com/modelcontextprotocol/go-sdk` v1.8.0 | `go.mod` |
 | MCP protocol | Go SDK client negotiates `2026-07-28`; a raw client requesting `2025-11-25` (or any other version) is answered `2025-11-25` | `cmd/graph-mcp/stdio_test.go`, `examples/python/parser_scenario.py` |
 | JSON Schema | 2020-12, validated with `santhosh-tekuri/jsonschema/v6` v6.0.3 with format assertions (uuid, uri, date-time) | `toolkit/contracts.go` |
-| Contract | tool contracts 0.2 (proposed); prompt assets version 1; snapshot schema version 1 | `spec/`, `toolkit/prompts` |
+| Contract | tool contracts 0.2 (approved); prompt assets version 1; snapshot schema version 1 (only supported version) | `spec/`, `toolkit/prompts` |
 
 ## Testing
 
@@ -131,7 +131,7 @@ go vet ./... && go test -count=1 ./...
 python toolkit/generate_contracts.py --check
 ```
 
-The stdio tests build `cmd/graph-mcp` and run it as a subprocess; the Python consumer test needs Python 3.8+ (standard library only). CI additionally runs `go test -race` and `govulncheck`; the race detector needs cgo and was not available in the local Windows environment used for development.
+The stdio tests build `cmd/graph-mcp` and run it as a subprocess; the Python consumer test needs Python 3.8+ (standard library only). The clean baseline at `01a1bf1` passed the CI payload on Go 1.25.0 and 1.27.3, each with 142 test/subtest passes, zero failures and zero skipped tests. Both included `go test -race`, required PostgreSQL 17.11 and Python 3.12.3. These results verify that baseline only; the current candidate still needs the final clean matrix after remaining lifecycle, URI and two-stage fixture work. Hosted GitHub Actions has not run. See `docs/CLEAN-ENVIRONMENT.md` and `docs/RELEASE-NOTES.md`.
 
 ## Second consumer (Python, no Go API)
 

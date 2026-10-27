@@ -1,6 +1,6 @@
 {
   "contract_version": "0.2",
-  "status": "proposed",
+  "status": "approved",
   "description": "Transport-neutral strict model input and result envelope schemas. Trusted context is host-owned.",
   "tools": [
     {
