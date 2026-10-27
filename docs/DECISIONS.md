@@ -7,3 +7,15 @@ The local Go module is `ns-exploration-graph`. The graph package owns semantic c
 This deliberately prioritizes correctness for modest graphs over write throughput. Aggregate mutation cost grows with graph history; 100/1,000/10,000-node benchmarks document practical bounds. Read snapshots exclude event envelopes; bounded EventsAfter is separate. All store calls require context and namespace. Namespace checks are partition checks, while authorization belongs to host adapters.
 
 Public snapshots mirror the versioned JSON contract. Typed payload structs encode known fields; revision payloads remain raw JSON for immutable storage and strict kind-specific validation. Result data uses a JSON object so storage can preserve exact committed responses on retry.
+
+## 002: Initial revisions, acceptance results and freshness
+
+CreateGraph writes graph revision 1 and its event. Done work is terminal. Dependency edits are permitted only while the dependent remains open. Read summaries label evidence `fresh` or `stale` by recursively checking exact supporting revisions; other kinds are `not_applicable`.
+
+Acceptance results explicitly include acceptance ID, resulting goal revision, reviewed evidence revision references, complete support edge closure and reviewed resource IDs. Host references use `node_id`; model tool references use `id` and adapters translate them. First and replayed results use detached JSON-compatible values (numbers in generic result maps use float64).
+
+## 003: Revision evidence and restore validation
+
+New active observation revisions must supply inline evidence because existing resource references are pinned to older revisions and are not inherited. A reference-only observation can be retracted with an explicit reason; its retracted revision need not manufacture new evidence. The original evidence references remain historical. Restore applies the evidence requirement to active observation revisions and validates that lifecycle transitions are legal.
+
+Snapshot import validates the canonical embedded JSON Schema with UUID, URI, and date-time format assertions, then all cross-record relationships before accessing current revisions. It preserves imported node histories, writes destination event/revision 1, and rejects collisions with the reserved `metadata.import_source` field, including attempts to restore an already-restored snapshot without explicit metadata preparation by the host.

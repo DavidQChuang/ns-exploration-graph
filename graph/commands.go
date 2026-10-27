@@ -379,6 +379,9 @@ func (s *Service) nodeAction(ctx context.Context, c CommandContext, p NodeAction
 				to = "consumed"
 			}
 		case "RetractEvidence":
+			if !nonempty(p.Reason) {
+				return nil, Err("invalid_argument", "Retraction reason is required.")
+			}
 			if (n.Kind == "observation" || n.Kind == "conclusion") && r.State == "active" {
 				to = "retracted"
 			}

@@ -55,6 +55,9 @@ func validateContext(c CommandContext) error {
 	return nil
 }
 func (s *Service) mutate(ctx context.Context, c CommandContext, kind string, payload any, create *Graph, fn func(*State) (map[string]any, error)) (Result, error) {
+	return s.mutateWithLimit(ctx, c, kind, payload, create, s.Limits.CommandBytes, fn)
+}
+func (s *Service) mutateWithLimit(ctx context.Context, c CommandContext, kind string, payload any, create *Graph, maxInput int, fn func(*State) (map[string]any, error)) (Result, error) {
 	var out Result
 	if e := validateContext(c); e != nil {
 		return out, e
@@ -67,9 +70,16 @@ func (s *Service) mutate(ctx context.Context, c CommandContext, kind string, pay
 	if e != nil {
 		return out, Err("invalid_argument", "Input cannot be encoded.")
 	}
-	if len(encoded) > s.Limits.CommandBytes {
+	if len(encoded) > maxInput {
 		return out, Err("limit_exceeded", "Command input is too large.")
 	}
+	var canonical any
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.UseNumber()
+	if err := decoder.Decode(&canonical); err != nil {
+		return out, Err("invalid_argument", "Input cannot be canonicalized.")
+	}
+	encoded, _ = json.Marshal(canonical)
 	sum := sha256.Sum256(encoded)
 	hash := hex.EncodeToString(sum[:])
 	e = s.store.Update(ctx, c.Namespace, c.GraphID, create, func(st *State) error {

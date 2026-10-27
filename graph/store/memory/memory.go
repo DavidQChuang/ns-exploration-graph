@@ -38,7 +38,11 @@ func (s *Store) Update(ctx context.Context, ns, id string, create *graph.Graph, 
 	if e = ctx.Err(); e != nil {
 		return e
 	}
-	s.states[id] = v
+	committed, err := graph.CloneState(v)
+	if err != nil {
+		return err
+	}
+	s.states[id] = committed
 	return nil
 }
 func (s *Store) Read(ctx context.Context, ns, id string) (*graph.State, error) {
@@ -54,7 +58,9 @@ func (s *Store) Read(ctx context.Context, ns, id string) (*graph.State, error) {
 	if v.Graph.Namespace != ns {
 		return nil, graph.Err("permission_denied", "Namespace does not match.")
 	}
-	c, e := graph.CloneState(v)
+	readState := *v
+	readState.Events = nil
+	c, e := graph.CloneState(&readState)
 	if c != nil {
 		c.Events = nil
 	}
@@ -73,7 +79,13 @@ func (s *Store) EventsAfter(ctx context.Context, ns, id string, after int64, lim
 	if v.Graph.Namespace != ns {
 		return nil, 0, graph.Err("permission_denied", "Namespace does not match.")
 	}
-	c, e := graph.CloneState(v)
+	readState := graph.State{Snapshot: graph.Snapshot{Graph: v.Graph}, Events: []graph.Event{}}
+	for _, ev := range v.Events {
+		if ev.Revision > after && len(readState.Events) < limit {
+			readState.Events = append(readState.Events, ev)
+		}
+	}
+	c, e := graph.CloneState(&readState)
 	if e != nil {
 		return nil, 0, e
 	}
