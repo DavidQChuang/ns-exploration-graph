@@ -2,7 +2,7 @@
 
 A durable "exploration graph" library for agent harnesses, written in Go. It stores an investigation as typed, revisioned nodes (origin, goals, work items, observations, conclusions, hints) with typed edges, resource references and goal acceptances. A shared command service enforces the rules; two storage adapters persist it (in-memory reference store and PostgreSQL). Eight narrow, schema-validated tools expose it to models, in-process or over MCP stdio.
 
-Status: source release candidate 0.2.0. Tool contract 0.2 is approved (`"status": "approved"` in `spec/tool-contracts.json`); snapshot schema version 1 is the only supported version. Final candidate verification, archive inspection and production sign-off remain pending. This status does not declare the candidate production-ready or published. Evidence and open gates are tracked in `docs/RELEASE-CHECKLIST.md` and `docs/REQUIREMENTS.md`.
+Status: source release candidate 0.2.0. Tool contract 0.2 is approved (`"status": "approved"` in `spec/tool-contracts.json`); snapshot schema version 1 is the only supported version. Runtime verification passed for candidate commit `62c083f`; inspection of the final source archive and root delivery sign-off remain pending. Nothing has been published. Verification evidence and packaging steps are tracked in `docs/CLEAN-ENVIRONMENT.md` and `docs/RELEASE-CHECKLIST.md`.
 
 ## What it is not
 
@@ -29,7 +29,7 @@ go build ./...
 go build -o bin/graph-mcp ./cmd/graph-mcp
 ```
 
-The module path is `ns-exploration-graph`. The proposed 0.2.0 distribution is source-only: it does not include Go or PostgreSQL runtimes, built executables, or dependency binaries. No package-registry or other publication has occurred.
+The module path is `ns-exploration-graph`. The local 0.2.0 release is source-only: it does not include Go or PostgreSQL runtimes, built executables, or dependency binaries. No package-registry or other publication has occurred.
 
 ## Quick start (in process)
 
@@ -114,7 +114,7 @@ Over-limit input fails before any write. Boundary behavior is covered by tests i
 
 | Component | Version | Evidence |
 |---|---|---|
-| Go | module minimum 1.25.0; developed and tested here with Go 1.27.3 | `go.mod`, test runs |
+| Go | module minimum 1.25.0; candidate verified with Go 1.25.0 and 1.27.3 | `go.mod`, `docs/CLEAN-ENVIRONMENT.md` |
 | PostgreSQL | tested against 17.11 (portable runtime); CI uses the `postgres:17` image | `docs/POSTGRES-VERIFICATION.md`, `.github/workflows/test.yml` |
 | MCP Go SDK | `github.com/modelcontextprotocol/go-sdk` v1.8.0 | `go.mod` |
 | MCP protocol | Go SDK client negotiates `2026-07-28`; a raw client requesting `2025-11-25` (or any other version) is answered `2025-11-25` | `cmd/graph-mcp/stdio_test.go`, `examples/python/parser_scenario.py` |
@@ -131,7 +131,7 @@ go vet ./... && go test -count=1 ./...
 python toolkit/generate_contracts.py --check
 ```
 
-The stdio tests build `cmd/graph-mcp` and run it as a subprocess; the Python consumer test needs Python 3.8+ (standard library only). The clean baseline at `01a1bf1` passed the CI payload on Go 1.25.0 and 1.27.3, each with 142 test/subtest passes, zero failures and zero skipped tests. Both included `go test -race`, required PostgreSQL 17.11 and Python 3.12.3. These results verify that baseline only; the current candidate still needs the final clean matrix after remaining lifecycle, URI and two-stage fixture work. Hosted GitHub Actions has not run. See `docs/CLEAN-ENVIRONMENT.md` and `docs/RELEASE-NOTES.md`.
+The stdio tests build `cmd/graph-mcp` and run it as a subprocess; the Python consumer test needs Python 3.8+ (standard library only). Corrected candidate `62c083f` passed the clean matrix on Go 1.25.0 and 1.27.3: each run recorded 195 test/subtest passes, zero failures and zero skips across seven test-bearing packages, with native CGO, fresh PostgreSQL 17.11 and Python 3.12. Direct, in-process MCP and Python reports agreed on 14 events, 8 nodes, 2 work items, 4 evidence nodes and 2 resources. The patched Go 1.27.3 vulnerability scan found zero affecting vulnerabilities and zero findings in imported packages, plus one finding in an uncalled required module. These results verify runtime behavior at `62c083f`; final source-archive inspection and delivery sign-off remain. Hosted GitHub Actions has not run. See `docs/CLEAN-ENVIRONMENT.md` and `docs/RELEASE-NOTES.md`.
 
 ## Second consumer (Python, no Go API)
 

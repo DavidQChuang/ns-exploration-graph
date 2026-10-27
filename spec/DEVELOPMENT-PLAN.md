@@ -1,6 +1,6 @@
 # Exploration graph tool: orchestration game plan
 
-Planning baseline: October 27, 2026; contract v0.2 is approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version). The plan records the original work sequence and acceptance gates; implementation is now present in the repository. Final candidate verification and release sign-off remain pending. Current implementation status and evidence are tracked in [TASKS.md](../TASKS.md) and [RELEASE-CHECKLIST.md](../docs/RELEASE-CHECKLIST.md).
+Planning baseline: October 27, 2026; contract v0.2 is approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version). This plan records the original work sequence and acceptance gates; implementation is present and candidate commit `62c083f` passed the Go 1.25.0 and 1.27.3 runtime matrix. Evidence is tracked in [CLEAN-ENVIRONMENT.md](../docs/CLEAN-ENVIRONMENT.md) and [RELEASE-CHECKLIST.md](../docs/RELEASE-CHECKLIST.md). Source-archive inspection and root delivery sign-off remain pending.
 
 ## Delivery objective
 

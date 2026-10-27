@@ -78,7 +78,7 @@ A client without durable invocation identity must treat a lost response or disco
 
 ## 8. Limits and compatibility
 
-Limits and versions are listed in `README.md`. Unknown tool fields and over-limit input are rejected rather than repaired. Normative contract version 0.2 is approved by `docs/DECISIONS.md` 012. Changes to its schemas, error codes or prompt assets require a recorded contract decision; intentional breaking changes require a new minor contract/release version and compatibility notes. Final candidate verification remains pending. `python toolkit/generate_contracts.py --check` and the tests in `toolkit/` fail on generated contract drift.
+Limits and versions are listed in `README.md`. Unknown tool fields and over-limit input are rejected rather than repaired. Normative contract version 0.2 is approved by `docs/DECISIONS.md` 012. Changes to its schemas, error codes or prompt assets require a recorded contract decision; intentional breaking changes require a new minor contract/release version, migration or compatibility notes, and fixtures. Candidate commit `62c083f` passed the Go 1.25.0 and 1.27.3 runtime matrix; source-archive inspection and root delivery sign-off remain pending. `python toolkit/generate_contracts.py --check` and the tests in `toolkit/` fail on generated contract drift.
 
 ## Not provided
 

@@ -1,31 +1,33 @@
-# Release notes — source candidate 0.2.0
+# Release notes — source release candidate 0.2.0
 
-Candidate metadata for the proposed source-only 0.2.0 release, dated 2026-10-27. Tool contract 0.2 has been approved and is marked `approved` in `spec/tool-contracts.json`. This does not certify the final candidate: required lifecycle and URI corrections, the two-stage fixture, clean-matrix reruns, final archive inspection and production sign-off remain pending. Nothing has been published, and this document is not a production-readiness declaration.
+Local source-only release candidate 0.2.0, dated 2026-10-27. Tool contract 0.2 is approved by Decision 012; snapshot schema version 1 is the only supported version. Candidate commit `62c083f` passed the clean runtime matrix on both declared compilers. Final source-archive inspection and root delivery sign-off remain packaging steps. Nothing has been published, and this note does not claim hosted CI execution or a published release.
 
-The intended distribution is project source only. It includes no Go or PostgreSQL toolchain/runtime, built executable, or dependency binary. No future SQL upgrade path is promised; migration 001 is the only migration currently present. Snapshot schema version 1 is the only supported version. See `docs/COMPATIBILITY.md` for the pre-1.0 versioning policy.
-
-## Candidate scope
+## Included
 
 - Standalone Go exploration-graph library with shared semantics for in-memory and PostgreSQL stores.
-- Eight schema-validated tools, available in process or through the stdio MCP adapter.
-- Versioned snapshots, prompt assets and deterministic direct/MCP/Python examples.
-- Explicit trusted-host boundaries for authorization, evidence resolution, work assignment, acceptance policy and durable invocation identity.
+- Eight schema-validated tools available in process or through the stdio MCP adapter.
+- Versioned snapshots, prompt assets and deterministic direct, in-process MCP and Python stdio examples.
+- Trusted-host boundaries for authorization, evidence resolution, work assignment, acceptance policy and durable invocation identity.
 
-The library does not run models, schedule workers, resolve or authorize external evidence, authenticate remote callers, provide a viewer, or promise exactly-once writes for generic MCP clients. The stock stdio host assigns a fresh invocation identity to each call; after an ambiguous write, clients must reconcile by reading the graph.
+The source distribution contains no Go or PostgreSQL toolchain/runtime, built executable, or dependency binary. Migration `001_initial.sql` is the only current SQL migration; no future SQL upgrade path is promised. Contract compatibility policy is in `docs/COMPATIBILITY.md`.
 
-## Baseline verification evidence
+## Runtime verification
 
-The clean verification payload passed for committed baseline `01a1bf1cf69b` on 2026-10-27 with Go 1.25.0 and Go 1.27.3. Each independent source-archive run exited successfully and recorded 142 test/subtest passes, zero failures and zero skipped tests across seven test-bearing packages. The runs used empty build/module caches, native Linux amd64 with CGO enabled, GCC 13.3.0, Python 3.12.3 and isolated PostgreSQL 17.11. Each included dependency verification, contract generation drift check, `go vet ./...`, `go build ./...`, tool installation, `go test -race -json -count=1 ./...`, explicit stdio/Python checks and direct/MCP/Python example parity. The Go 1.27.3 lane also ran govulncheck v1.9.0: no vulnerability affecting called code, no findings in imported packages and one finding in a required but uncalled module.
+The corrected candidate source `62c083f` passed both clean environment commands on 2026-10-27:
 
-The two-stage fixture lane is underway. Its intended workflow resumes a new session from graph state, proposes fix-verification work and records a passing result. This candidate still needs that fixture and equivalence checks in the direct, MCP and Python examples. The remaining lifecycle/error and URI validation gates also need correction and runtime coverage. Once those changes are integrated, rerun both clean compiler lanes; baseline results do not verify later source changes.
+```sh
+bash scripts/verify-clean-environment.sh 62c083f 1.25.0
+bash scripts/verify-clean-environment.sh 62c083f 1.27.3
+```
 
-## Remaining release gates
+Both lanes used fresh source copies and test environments, native Linux amd64 with `CGO_ENABLED=1`, required PostgreSQL 17.11 and Python 3.12.3, and completed the full race-enabled release payload. Each recorded **195 test/subtest passes, 0 failures and 0 skipped tests across 7 test-bearing packages**. The direct, in-process MCP and Python stdio reports agreed on 14 events, 8 nodes, 2 work items, 4 evidence nodes and 2 resources. In the Go 1.27.3 lane, govulncheck v1.9.0 found 0 vulnerabilities affecting code, 0 findings in imported packages and 1 finding in a required module whose vulnerable code is not called. The exact environment evidence is recorded in `docs/CLEAN-ENVIRONMENT.md`.
 
-- Complete runtime coverage for the remaining lifecycle transitions and all stable error codes; correct host URI validation to match snapshot validation.
-- Complete the two-stage fixture and compare normalized direct, MCP and Python outcomes.
-- Rerun the clean Go 1.25.0 and 1.27.3 matrices against final candidate source.
-- Inspect the actual source archive, its tracked-file inventory, notices and checksum; record the archive location and integrator sign-off.
+## Scope and limits
 
-GitHub Actions has not run: there is no remote and no hosted workflow execution. Local verification exercised the checked-in payload, not GitHub's checkout/setup/upload orchestration. The source dependency/license inventory in `docs/DEPENDENCIES.md` is an engineering record, not legal review or a legal conclusion. The final archive has not been inspected. No package, binary or other release has been published.
+The graph stores evidence references but does not fetch, authorize or interpret their targets. Hosts own authentication, scheduling, worker leases and external effects. The stock stdio host assigns a new invocation identity per call; after an ambiguous write, clients must read the graph before deciding whether to retry. Generic MCP clients do not receive transparent exactly-once writes.
 
-For detailed results and gates, see `docs/CLEAN-ENVIRONMENT.md`, `docs/RELEASE-CHECKLIST.md`, `docs/REQUIREMENTS.md` and `docs/POSTGRES-VERIFICATION.md`.
+Ordinary reads transfer current nodes and graph edges in O(nodes + edges); mutations load graph history. Snapshot operations are whole-graph, and `ListEligibleWork` is unpaged. These are documented scale limits, not throughput promises. Model-backed smoke testing is optional and was not part of the release gate. The optional M3 viewer is outside this release.
+
+GitHub Actions has not run. Local runs exercised the checked-in verification payload, not GitHub's hosted checkout/setup/upload orchestration. The final source archive has not yet been inspected and no archive checksum or location is claimed. No package, binary or other release has been published. Dependency license records in `docs/DEPENDENCIES.md` are an engineering inventory, not legal review or a legal conclusion.
+
+For implementation and verification details, see `docs/CLEAN-ENVIRONMENT.md`, `docs/POSTGRES-VERIFICATION.md`, `docs/COMPATIBILITY.md` and `docs/RELEASE-CHECKLIST.md`.

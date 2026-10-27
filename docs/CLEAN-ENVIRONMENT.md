@@ -77,3 +77,27 @@ go test -race -count=1 -v -run '^TestPostgresConformance$/^HostResourceURIsMatch
 Evidence: `.local/uri-go1.25.0-20261027T172839Z-332616/` and `.local/uri-go1.27.3-20261027T172840Z-332706/`, containing source copies, baseline revision, `overlay.sha256`, `verification.log`, PostgreSQL log and exit result. These targeted worktree-overlay checks establish the correction's focused behavior; they do not replace the full matrix on the next committed candidate. The shared assertion makes IP-literal/authority handling consistent across compilers while retaining existing opaque/custom-scheme parsing behavior; it is not a claim of a complete strict RFC parser.
 
 The diagnostic baseline was `bbabbe6b10c217dfc46f95f6e2a1afe3b09fc0bb`; each log contains **35 test/subtest passes, 0 failures and 0 skips** across the focused commands above.
+
+## Completed corrected-source matrix: 62c083f
+
+The corrected implementation `62c083f422be2f25e538724179c9fa142bd17e91` completed both native clean-source verification lanes. The commands were launched on 2026-10-27; their durable results were inspected after the usage reset without rerunning either matrix. Exact commands:
+
+```sh
+bash scripts/verify-clean-environment.sh 62c083f422be2f25e538724179c9fa142bd17e91 1.25.0
+bash scripts/verify-clean-environment.sh 62c083f422be2f25e538724179c9fa142bd17e91 1.27.3
+```
+
+The independently recomputed SHA-256 of each retained `source.tar` is `59abb2201ac460539ae793050627c7691052f29a9eb18a2ec0e545d650df24f9`. Tool image IDs remain `sha256:67b4151ef689e091606acc3a7fbbd63ef171aa02a5336d2eadb5317a9c473084` (Go 1.25.0) and `sha256:eb1f98d818d6bb6c02c19c7327675f84bc5383ea22b42e6e43e5fff86fe3a88f` (Go 1.27.3). Each used fresh source, absent module/build caches, a separate new PostgreSQL database, the pinned image/compiler inputs above, native Linux amd64, Python 3.12.3, GCC 13.3.0, PostgreSQL 17.11 (`Debian 17.11-1.pgdg13+2`), `CGO_ENABLED=1`, `GOTOOLCHAIN=local`, `CI=1`, and required PostgreSQL/Python.
+
+Both lanes passed dependency download/verification, generator drift, vet, build/install and the complete race suite. Independently parsed `evidence/race-tests.jsonl` records **195 test/subtest passes, 0 failed tests, 0 skipped tests and 7 passed test-bearing packages in each lane**. The two helper packages have no standalone test files; their package-level skip events are not skipped tests. No data race was reported. This includes the corrected URI cases and the full memory/PostgreSQL conformance suites, closing the minimum-compiler failure recorded for `ba4769a` above.
+
+Both lanes also completed the explicit stdio tests and Python consumer with and without the lost-response drill. Their separately executed `direct.json`, `mcp.json` and `python.json` reports are equal after JSON decoding: revision 14, 14 events, two completed work items, four reviewed evidence nodes, two reviewed resources, a met goal and graph-only resume. The minimum lane's final log line is `Documented direct, in-process MCP, and Python stdio reports agree`. The patched lane subsequently completed govulncheck v1.9.0: 0 affecting vulnerabilities, 0 findings in imported packages, and 1 finding in a required module whose vulnerable code is not called. Its retained log ends with that successful scan report. The minimum lane does not configure a vulnerability scan.
+
+Final retained evidence directories (relative to the repository; ignored):
+
+- `.local/clean-environment/20261027T173045Z-62c083f422be-go1.25.0-344721/` — complete minimum-compiler lane; original process handle `54818`.
+- `.local/clean-environment/20261027T173044Z-62c083f422be-go1.27.3-344709/` — complete patched-compiler lane; original process handle `84590`.
+
+Each contains source/archive hashes, environment and provisioning records, the complete verification/PostgreSQL logs and copied `evidence/` results; the patched lane additionally retains the vulnerability report. Follow-up inspection found no matching runner/database containers, private Docker networks or active verification process. The original process handles had expired and the helper did not persist its outer terminal `Exit:` line, so a directly recovered shell exit code is unavailable. Completion and successful checks are established by the complete race results, all smoke reports, final configured step output and completed cleanup; no missing terminal exit status is presented as an observed value. No new tests, provisioning or matrix restart were used for this confirmation.
+
+The clean-source build/install, required database/Python execution, native race detector and declared minimum compiler gates are supported by this corrected-source matrix. Hosted GitHub Actions orchestration remains unexecuted. Final artifact inventory/checksum and integrator release approval are separate records.

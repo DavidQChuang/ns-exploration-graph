@@ -1,6 +1,6 @@
 # Exploration graph tool design package
 
-Normative contract v0.2, approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version) · October 27, 2026. The repository contains the implementation; final candidate verification and release sign-off remain pending. See [TASKS.md](../TASKS.md) and [RELEASE-CHECKLIST.md](../docs/RELEASE-CHECKLIST.md) for current status and evidence.
+Normative contract v0.2, approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version) · October 27, 2026. Candidate commit `62c083f` passed the Go 1.25.0 and 1.27.3 runtime matrix. See [CLEAN-ENVIRONMENT.md](../docs/CLEAN-ENVIRONMENT.md) for evidence; source-archive inspection and root delivery sign-off remain pending.
 
 Start with [the implementation specification](SPEC.md), then [the agent integration contract](TOOLS.md), then [the orchestration game plan](DEVELOPMENT-PLAN.md).
 
