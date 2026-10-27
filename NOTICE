@@ -1,0 +1,9 @@
+This project is an independent implementation. Its design was informed by
+behavioral study of ARTEX at the following pinned revision:
+
+ARTEX, commit 7f8c7cbcae7324e823d8952371ae2013521cc711
+https://github.com/BaaRai/ARTEX/tree/7f8c7cbcae7324e823d8952371ae2013521cc711
+
+No ARTEX source code is included in this project. This attribution does not
+claim endorsement by the ARTEX project or its contributors. No legal review
+is represented by this notice.

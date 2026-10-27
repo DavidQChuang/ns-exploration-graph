@@ -8,7 +8,8 @@ Root role: coordinator, integrator, release auditor, and Git committer. Implemen
 
 - `/root/core_lead` — gpt-6-astra / high; owns Go domain contracts, semantic service, memory store, projection/restore, core tests, and docs/DECISIONS.md.
 - `/root/storage_infra` — gpt-6.1-sol / high; owns local toolchain provisioning, PostgreSQL adapter/migrations, DB tests, scripts, and CI.
-- `/root/requirements_docs` — gpt-6-luna / high; owns docs/REQUIREMENTS.md, docs/RELEASE-CHECKLIST.md, LICENSE, and NOTICE. Later replace with integration lane when interfaces stabilize.
+- `/root/toolkit_mcp` — gpt-6.1-sol / high; owns toolkit/, adapters/mcp/, cmd/, examples/, prompt assets, README.md, docs/INTEGRATION.md, and transport conformance tests. Coordinates interfaces/dependencies with core/storage.
+- Completed `/root/requirements_docs` — gpt-6-luna / high; delivered docs/REQUIREMENTS.md, docs/RELEASE-CHECKLIST.md, LICENSE, and NOTICE. Verification status deliberately remains NOT VERIFIED until runtime evidence is recorded.
 
 All agents share the checkout. Root stages named paths only and records commits at coherent boundaries. No agent may overwrite another lane's work or silently change the public contract.
 
