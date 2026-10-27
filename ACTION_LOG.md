@@ -25,3 +25,11 @@
 - PostgreSQL checkpoint committed as b5d2f53.
 - Root reran direct toolkit tests: PASS strict input/output validation, permissions and trusted worker binding; MCP server/CLI compile but protocol tests not yet present. Committing adapter foundation without claiming G4/G5 complete. Official MCP Go SDK pinned to v1.8.0 and raises module minimum to Go 1.25.
 - Approved semantic clarification: a retracted observation revision need not duplicate prior resource evidence; active observation revisions still require evidence, and original references remain historical.
+
+## 2026-10-27 — Handoff to new orchestrator
+
+- Orchestration moved from the stopped Codex session to a Cursor agent (Claude). Prior Codex agents (core_lead/storage_infra/toolkit_mcp) are no longer running; reset heartbeat is not carried over. Usage-limit logic does not apply to this orchestrator. Toolchain runs from WSL by invoking the Windows `.local/go/bin/go.exe` with GOCACHE/GOMODCACHE via WSLENV; PostgreSQL 17.11 (PID 46012, port 55439) was still running and was reused.
+- Inspected actual state: HEAD 79b71b4 plus uncommitted snapshot/adversarial/MCP-test/example work. Root ran `go build`, `go vet`, and `go test -count=1 ./...` with GRAPH_REQUIRE_POSTGRES=1: all packages PASS, including real PostgreSQL, after the pgx v5.9.2 / x/text v0.41.0 upgrade.
+- Root reran govulncheck v1.9.0: no reachable vulnerabilities (0 affected; 1 in a required module not called). This closes the pending post-upgrade rescan.
+- Committed existing work in three coherent commits: fc675c2 (dependency upgrade, benchmarks), a54b4d3 (snapshot export/restore, adversarial tests, result contracts), e6d3a6d (MCP protocol tests, scripted harness example). Still not claimed: G0 result schemas, G3 performance sign-off, G4/G5 release gates.
+- Started tiered agents on disjoint paths: core_perf (claude-opus-5-5-medium; graph/**, bounded reads, G3 performance and restore tests) and toolkit_mcp (claude-sonnet-5-5-high; toolkit/adapters/cmd/examples, result schemas, stdio + Python second consumer, README/INTEGRATION, CI). Root remains coordinator and Git committer.

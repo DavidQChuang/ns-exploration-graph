@@ -12,4 +12,4 @@ Status: active. Scope: complete portable-tool release M1 + M2; optional viewer M
 - [ ] Independent correctness/security review; resolve all material findings.
 - [ ] Final requirements-to-evidence audit and clean committed delivery.
 
-Current focus: complete G2/G3 adversarial validation and restore, plus toolkit/MCP tests. Shared conformance passes on memory and real PostgreSQL, with explicit fault injection and concurrency tests. G0 result-schema completion and G4/G5 adapter/release checks remain open.
+Current focus (2026-10-27 handoff): G3 bounded-read performance and restore verification (core_perf); result schemas, G4/G5 conformance, stdio + Python second consumer, docs and CI (toolkit_mcp). Then independent review and release-checklist audit. Earlier: complete G2/G3 adversarial validation and restore, plus toolkit/MCP tests. Shared conformance passes on memory and real PostgreSQL, with explicit fault injection and concurrency tests. G0 result-schema completion and G4/G5 adapter/release checks remain open.

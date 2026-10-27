@@ -15,6 +15,6 @@ All agents share the checkout. Root stages named paths only and records commits 
 
 ## Recovery
 
-Read this file, TASKS.md, ACTION_LOG.md, docs/DECISIONS.md, actual Git status/log, and live agent state. Do not restart already active assignments. Check usage before expensive stages. At >=90% five-hour usage (or a limiting weekly allowance), finish/checkpoint the current bounded unit, stop new assignments, and defer until reset. The thread heartbeat `resume-ns-exploration-graph-implementation` checks for safe resumption hourly at minute 7. It does not spend reset credits or purchase capacity. Keep the durable goal active while deferring work; do not mark incomplete work complete. Disable the heartbeat after verified completion.
+Read this file, TASKS.md, ACTION_LOG.md, docs/DECISIONS.md, actual Git status/log, and live agent state. Do not restart already active assignments. Run commands from WSL with the Windows toolchain (see ACTION_LOG handoff entry); PostgreSQL on port 55439 must be inspected before any restart. The old Codex heartbeat `resume-ns-exploration-graph-implementation` and its usage-reset logic are not carried over. Do not mark incomplete work complete.
 
 Completion requires evidence for every M1/M2 gate; no blanket production-ready assertion without the audit.
