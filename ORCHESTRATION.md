@@ -13,7 +13,8 @@ Orchestrator handoff on 2026-10-27: Cursor agent (Claude) replaced the stopped C
 - Completed (previous session) `requirements_docs` — delivered docs/REQUIREMENTS.md, docs/RELEASE-CHECKLIST.md, LICENSE, NOTICE. Verification status remains NOT VERIFIED until runtime evidence is recorded.
 - Completed `reviewer` (agent 35e7e671) — claude-opus-5-5-medium; read-only. Two medium findings and three low ones. No release claim.
 - Completed `review_fixes` (agent 1941b273) — claude-opus-5-5-medium. MCP ambiguous retry, clock-independent restore, ProposeWork error code, and decisions 007–009. Root verified the suite and committed the result.
-- `release_audit` (agent 09a0b571) — claude-sonnet-5-5-high; fills docs/RELEASE-CHECKLIST.md and evidence cells in docs/REQUIREMENTS.md only. Does not commit. Must leave GitHub Actions, the race detector, and a clean-machine install unverified.
+- Completed `release_audit` (agent 09a0b571) — claude-sonnet-5-5-high. Thirteen checklist rows verified from named tests; environmental and coverage gates left open. Root committed the audit.
+- Next lane: tests for unrelated-goal freshness, criteria invalidation, the claim/dependency race, and a cyclic snapshot, plus a short compatibility note and draft release notes. No release claim.
 
 All agents share the checkout. Root stages named paths only and records commits at coherent boundaries. No agent may overwrite another lane's work or silently change the public contract.
 

@@ -63,3 +63,8 @@
 - Root reran `go vet ./...` and `go test -count=1 ./...` with PostgreSQL and Python required. Every package passed. Race detector was not run.
 - Commit follows this entry. Independent review findings are resolved. Release-checklist audit is next. G5 remains open: no GitHub Actions run and no clean-machine install.
 - Started release_audit (agent 09a0b571) to fill docs/RELEASE-CHECKLIST.md from cited evidence only. It must not mark GitHub Actions, the race detector, or a clean-machine install as verified.
+
+## 2026-10-27 — release audit recorded
+
+- release_audit (agent 09a0b571) filled docs/RELEASE-CHECKLIST.md and five REQUIREMENTS rows. It reran `go test -count=1 -v ./...` (113 PASS, 0 SKIP) and govulncheck v1.9.0 at f094f14 (no reachable vulnerabilities). Root committed that evidence without widening any VERIFIED box.
+- Behavior for the open G2 cases already exists in the service: invalidate skips unrelated acceptances, ReviseNode moves a met goal to needs_review, and AddDependency refuses work that is not open while TransitionWork rechecks prerequisites under the lock. Tests for those cases, for a cyclic snapshot, and for a compatibility note are the next lane. Environmental gates stay open: no remote, no race detector, no clean machine.
