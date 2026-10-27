@@ -7,26 +7,41 @@ import (
 	"ns-exploration-graph/graph"
 	"ns-exploration-graph/graph/store/postgres"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
 
-// BenchmarkPostgresAggregate documents the initial aggregate adapter's actual
-// costs. Fixture insertion is excluded. Use -benchtime=1x for the invalidation
-// case, which measures the first invalidation of a current goal acceptance.
+// BenchmarkPostgresAggregate measures ordinary reads and the first invalidation of a
+// current goal acceptance. Fixture insertion is excluded. Statement counts are
+// recorded by a pgx tracer and include BEGIN/COMMIT. Each invalidation iteration
+// re-establishes a current acceptance with the timer stopped.
 func BenchmarkPostgresAggregate(b *testing.B) {
 	dsn := os.Getenv("GRAPH_TEST_DATABASE_URL")
 	if dsn == "" {
 		b.Fatal("GRAPH_TEST_DATABASE_URL is required for PostgreSQL benchmarks")
 	}
 	ctx := context.Background()
-	db, e := postgres.Open(ctx, dsn)
+	log := &postgres.StatementLog{}
+	db, e := postgres.OpenTraced(ctx, dsn, log)
 	if e != nil {
 		b.Fatal(e)
 	}
 	defer db.Close()
 	if e = db.Migrate(ctx); e != nil {
 		b.Fatal(e)
+	}
+	report := func(b *testing.B, statements []string, result any) {
+		selects := 0
+		for _, sql := range statements {
+			if strings.HasPrefix(sql, "SELECT") {
+				selects++
+			}
+		}
+		encoded, _ := json.Marshal(result)
+		b.ReportMetric(float64(len(encoded)), "json-bytes")
+		b.ReportMetric(float64(len(statements))/float64(b.N), "stmts/op")
+		b.ReportMetric(float64(selects)/float64(b.N), "selects/op")
 	}
 	for _, size := range []int{100, 1000, 10000} {
 		b.Run(fmt.Sprint(size), func(b *testing.B) {
@@ -66,6 +81,7 @@ func BenchmarkPostgresAggregate(b *testing.B) {
 				b.Fatal(e)
 			}
 			var origin string
+			observation, goalRevision := 1, 2
 			e = db.Update(ctx, c.Namespace, id, nil, func(st *graph.State) error {
 				for _, n := range st.Nodes {
 					if n.Kind == "origin" {
@@ -84,54 +100,60 @@ func BenchmarkPostgresAggregate(b *testing.B) {
 			if e != nil {
 				b.Fatal(e)
 			}
-			b.Run("overview", func(b *testing.B) {
-				b.ReportAllocs()
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
-					result, e := svc.ProjectContext(ctx, c.Namespace, id, graph.ProjectionOptions{ByteBudget: 16384})
-					if e != nil {
-						b.Fatal(e)
-					}
-					encoded, _ := json.Marshal(result)
-					b.ReportMetric(float64(len(encoded)), "json-bytes")
-					b.ReportMetric(6, "selects/op")
-				}
-			})
-			b.Run("traversal", func(b *testing.B) {
-				b.ReportAllocs()
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
-					result, e := svc.Descendants(ctx, c.Namespace, id, graph.TraversalOptions{NodeID: origin, Relations: []string{"derived_from"}, Depth: 1, Limit: 100})
-					if e != nil {
-						b.Fatal(e)
-					}
-					encoded, _ := json.Marshal(result)
-					b.ReportMetric(float64(len(encoded)), "json-bytes")
-					b.ReportMetric(6, "selects/op")
-				}
-			})
-			b.Run("invalidation", func(b *testing.B) {
-				b.ReportAllocs()
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
-					st, e := db.Read(ctx, c.Namespace, id)
-					if e != nil {
-						b.Fatal(e)
-					}
-					revision := 0
-					for _, n := range st.Nodes {
-						if n.ID == oid {
-							revision = n.CurrentRevision
+			measure := func(name string, op func() (any, error)) {
+				b.Run(name, func(b *testing.B) {
+					log.Take()
+					var result any
+					b.ReportAllocs()
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						if result, e = op(); e != nil {
+							b.Fatal(e)
 						}
 					}
-					result, e := svc.ReviseNode(ctx, next(), graph.ReviseNodeInput{Node: graph.Ref{NodeID: oid, Revision: revision}, Title: "Revised evidence", Payload: json.RawMessage(`{"statement":"Changed","evidence":"changed log","epistemic_status":"observed"}`)})
+					b.StopTimer()
+					report(b, log.Take(), result)
+				})
+			}
+			measure("overview", func() (any, error) {
+				return svc.ProjectContext(ctx, c.Namespace, id, graph.ProjectionOptions{ByteBudget: 16384})
+			})
+			measure("traversal", func() (any, error) {
+				return svc.Descendants(ctx, c.Namespace, id, graph.TraversalOptions{NodeID: origin, Relations: []string{"derived_from"}, Depth: 1, Limit: 100})
+			})
+			measure("get_node", func() (any, error) {
+				return svc.GetNode(ctx, c.Namespace, id, graph.GetNodeOptions{NodeID: gid})
+			})
+			b.Run("invalidation", func(b *testing.B) {
+				var statements []string
+				var result graph.Result
+				b.ReportAllocs()
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					log.Take()
+					result, e = svc.ReviseNode(ctx, next(), graph.ReviseNodeInput{Node: graph.Ref{NodeID: oid, Revision: observation}, Title: "Revised evidence", Payload: json.RawMessage(`{"statement":"Changed","evidence":"changed log","epistemic_status":"observed"}`)})
 					if e != nil {
 						b.Fatal(e)
 					}
-					encoded, _ := json.Marshal(result)
-					b.ReportMetric(float64(len(encoded)), "json-bytes")
-					b.ReportMetric(14, "selects/op")
+					statements = append(statements, log.Take()...)
+					b.StopTimer()
+					observation++
+					goalRevision++
+					if v, e := svc.GetNode(ctx, c.Namespace, id, graph.GetNodeOptions{NodeID: gid}); e != nil || v.Revision.State != "needs_review" || v.CurrentRevision != goalRevision {
+						b.Fatalf("acceptance was not invalidated: %v", e)
+					}
+					support, e := svc.AddSupport(ctx, next(), graph.AddSupportInput{Source: graph.Ref{NodeID: oid, Revision: observation}, Target: graph.Ref{NodeID: gid, Revision: goalRevision}})
+					if e != nil {
+						b.Fatal(e)
+					}
+					if _, e = svc.AcceptGoal(ctx, next(), graph.AcceptGoalInput{Goal: graph.Ref{NodeID: gid, Revision: goalRevision}, SupportEdgeIDs: []string{support.Data["edge_id"].(string)}, Method: "validator", Rationale: "Fixture"}); e != nil {
+						b.Fatal(e)
+					}
+					goalRevision++
+					b.StartTimer()
 				}
+				b.StopTimer()
+				report(b, statements, result)
 			})
 		})
 	}

@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"encoding/json"
 	"ns-exploration-graph/graph"
 	"sync"
 )
@@ -13,6 +14,14 @@ type Store struct {
 
 func New() *Store { return &Store{states: map[string]*graph.State{}} }
 func (s *Store) Update(ctx context.Context, ns, id string, create *graph.Graph, fn func(*graph.State) error) error {
+	return s.update(ctx, ns, id, create, nil, fn)
+}
+
+// UpdateRequest exposes only the committed event for requestID to the callback.
+func (s *Store) UpdateRequest(ctx context.Context, ns, id string, create *graph.Graph, requestID string, fn func(*graph.State) error) error {
+	return s.update(ctx, ns, id, create, &requestID, fn)
+}
+func (s *Store) update(ctx context.Context, ns, id string, create *graph.Graph, requestID *string, fn func(*graph.State) error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if e := ctx.Err(); e != nil {
@@ -28,7 +37,18 @@ func (s *Store) Update(ctx context.Context, ns, id string, create *graph.Graph, 
 	if old.Graph.Namespace != ns {
 		return graph.Err("permission_denied", "Namespace does not match.")
 	}
-	v, e := graph.CloneState(old)
+	visible := old
+	if requestID != nil {
+		scoped := *old
+		scoped.Events = []graph.Event{}
+		for _, ev := range old.Events {
+			if ev.RequestID == *requestID {
+				scoped.Events = append(scoped.Events, ev)
+			}
+		}
+		visible = &scoped
+	}
+	v, e := graph.CloneState(visible)
 	if e != nil {
 		return e
 	}
@@ -42,8 +62,80 @@ func (s *Store) Update(ctx context.Context, ns, id string, create *graph.Graph, 
 	if err != nil {
 		return err
 	}
+	if requestID != nil {
+		appended := []graph.Event{}
+		for _, ev := range committed.Events {
+			if ev.Revision > old.Graph.Revision {
+				appended = append(appended, ev)
+			}
+		}
+		committed.Events = append(append([]graph.Event{}, old.Events...), appended...)
+	}
 	s.states[id] = committed
 	return nil
+}
+
+// ReadScoped returns a detached copy limited to scope without encoding the full state.
+func (s *Store) ReadScoped(ctx context.Context, ns, id string, scope graph.ReadScope) (*graph.State, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if e := ctx.Err(); e != nil {
+		return nil, e
+	}
+	v := s.states[id]
+	if v == nil {
+		return nil, graph.Err("not_found", "Graph not found.")
+	}
+	if v.Graph.Namespace != ns {
+		return nil, graph.Err("permission_denied", "Namespace does not match.")
+	}
+	out := graph.EmptyState(v.Graph)
+	out.Graph.Metadata = nil
+	if v.Graph.Metadata != nil {
+		metadata, e := graph.CloneState(&graph.State{Snapshot: graph.Snapshot{Graph: graph.Graph{Metadata: v.Graph.Metadata}}})
+		if e != nil {
+			return nil, e
+		}
+		out.Graph.Metadata = metadata.Graph.Metadata
+	}
+	copyRevision := func(r graph.Revision) graph.Revision {
+		r.Payload = append(json.RawMessage(nil), r.Payload...)
+		return r
+	}
+	out.Nodes = make([]graph.Node, 0, len(v.Nodes))
+	for _, n := range v.Nodes {
+		c := n
+		if n.ID == scope.DetailNodeID {
+			c.Revisions = make([]graph.Revision, 0, len(n.Revisions))
+			for _, r := range n.Revisions {
+				c.Revisions = append(c.Revisions, copyRevision(r))
+			}
+		} else {
+			c.Revisions = []graph.Revision{copyRevision(*n.Current())}
+		}
+		out.Nodes = append(out.Nodes, c)
+	}
+	out.Edges = append(out.Edges, v.Edges...)
+	if scope.DetailNodeID != "" {
+		for _, r := range v.ResourceRefs {
+			if r.NodeID == scope.DetailNodeID {
+				out.ResourceRefs = append(out.ResourceRefs, r)
+			}
+		}
+		for _, a := range v.Acceptances {
+			if a.GoalID == scope.DetailNodeID {
+				if a.SupportEdgeIDs != nil {
+					a.SupportEdgeIDs = append([]string{}, a.SupportEdgeIDs...)
+				}
+				if a.ReviewedResourceIDs != nil {
+					a.ReviewedResourceIDs = append([]string{}, a.ReviewedResourceIDs...)
+				}
+				out.Acceptances = append(out.Acceptances, a)
+			}
+		}
+	}
+	out.Events = nil
+	return out, nil
 }
 func (s *Store) Read(ctx context.Context, ns, id string) (*graph.State, error) {
 	s.mu.RLock()

@@ -64,7 +64,14 @@ type Node struct {
 	Revisions       []Revision `json:"revisions"`
 }
 
-func (n *Node) Current() *Revision { return &n.Revisions[n.CurrentRevision-1] }
+// Current returns the current revision. Scoped reads may carry only the current
+// revision rather than the complete history.
+func (n *Node) Current() *Revision {
+	if i := n.CurrentRevision - 1; i >= 0 && i < len(n.Revisions) && n.Revisions[i].Revision == n.CurrentRevision {
+		return &n.Revisions[i]
+	}
+	return &n.Revisions[len(n.Revisions)-1]
+}
 
 type Ref struct {
 	NodeID   string `json:"node_id"`
@@ -267,4 +274,26 @@ type SetGraphStateInput struct {
 // EventStore provides bounded durable event reads independently of ordinary snapshots.
 type EventStore interface {
 	EventsAfter(context.Context, string, string, int64, int) ([]Event, int64, error)
+}
+
+// ReadScope narrows an ordinary read. The zero scope covers the graph row, every
+// node with only its current revision, and every edge. DetailNodeID additionally
+// covers that node's complete revision history, its resource references, and the
+// acceptances recorded for it.
+type ReadScope struct {
+	DetailNodeID string
+}
+
+// ScopedReader is an optional Store extension for ordinary reads. The returned state
+// is consistent and detached like Read, but omits records outside the scope, so it
+// is never a snapshot. Stores without it are read through Read.
+type ScopedReader interface {
+	ReadScoped(ctx context.Context, namespace, graphID string, scope ReadScope) (*State, error)
+}
+
+// RequestUpdater is an optional Store extension. UpdateRequest behaves like Update,
+// except that State.Events passed to the callback holds only the committed event
+// whose request ID matches, if any. Events appended by the callback are persisted.
+type RequestUpdater interface {
+	UpdateRequest(ctx context.Context, namespace, graphID string, create *Graph, requestID string, fn func(*State) error) error
 }

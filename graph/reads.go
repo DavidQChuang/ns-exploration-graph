@@ -83,18 +83,14 @@ func cursorPosition(encoded string, g Graph, q string) (int, error) {
 	}
 	return c.Position, nil
 }
-func freshness(st *State, n *Node) string {
-	if n.Kind != "observation" && n.Kind != "conclusion" {
-		return "not_applicable"
+
+// read loads only what ordinary reads consult when the store supports scoping; a full
+// Read is a superset and yields identical results.
+func (s *Service) read(ctx context.Context, ns, id string, scope ReadScope) (*State, error) {
+	if scoped, ok := s.store.(ScopedReader); ok {
+		return scoped.ReadScoped(ctx, ns, id, scope)
 	}
-	if _, e := closure(st, ref(n), map[string]bool{}); e != nil {
-		return "stale"
-	}
-	return "fresh"
-}
-func summary(st *State, n *Node) NodeSummary {
-	r := n.Current()
-	return NodeSummary{n.ID, n.Kind, n.CurrentRevision, r.State, r.Title, freshness(st, n)}
+	return s.store.Read(ctx, ns, id)
 }
 func envelopeBytes(v any) int {
 	b, _ := json.Marshal(v)
@@ -156,10 +152,11 @@ func (s *Service) ListNodes(ctx context.Context, ns, id string, o ListOptions) (
 	if !validState(o.Kind, o.State) {
 		return out, Err("invalid_argument", "Incompatible node kind/state filter.")
 	}
-	st, e := s.store.Read(ctx, ns, id)
+	st, e := s.read(ctx, ns, id, ReadScope{})
 	if e != nil {
 		return out, e
 	}
+	ix := newIndex(st)
 	q := queryHash(struct{ Kind, State string }{o.Kind, o.State})
 	pos, e := cursorPosition(o.Cursor, st.Graph, q)
 	if e != nil {
@@ -182,7 +179,7 @@ func (s *Service) ListNodes(ctx context.Context, ns, id string, o ListOptions) (
 		end = len(nodes)
 	}
 	for _, n := range nodes[pos:end] {
-		out.Nodes = append(out.Nodes, summary(st, n))
+		out.Nodes = append(out.Nodes, ix.summary(n))
 	}
 	out.Omitted = len(nodes) - (end - pos)
 	if end < len(nodes) {
@@ -202,11 +199,12 @@ func (s *Service) GetNode(ctx context.Context, ns, id string, o GetNodeOptions) 
 	if budget < 1 || budget > s.Limits.ResultBytes {
 		return out, Err("limit_exceeded", "Invalid result budget.")
 	}
-	st, e := s.store.Read(ctx, ns, id)
+	st, e := s.read(ctx, ns, id, ReadScope{DetailNodeID: o.NodeID})
 	if e != nil {
 		return out, e
 	}
-	n, e := findNode(st, o.NodeID)
+	ix := newIndex(st)
+	n, e := ix.node(o.NodeID)
 	if e != nil {
 		return out, e
 	}
@@ -225,7 +223,7 @@ func (s *Service) GetNode(ctx context.Context, ns, id string, o GetNodeOptions) 
 	if e != nil {
 		return out, e
 	}
-	out = NodeView{GraphRevision: st.Graph.Revision, ID: n.ID, Kind: n.Kind, CurrentRevision: n.CurrentRevision, Revision: n.Revisions[rev-1], Freshness: freshness(st, n), Edges: []Edge{}, ResourceRefs: []ResourceRef{}}
+	out = NodeView{GraphRevision: st.Graph.Revision, ID: n.ID, Kind: n.Kind, CurrentRevision: n.CurrentRevision, Revision: n.Revisions[rev-1], Freshness: ix.freshness(n), Edges: []Edge{}, ResourceRefs: []ResourceRef{}}
 	if rev != n.CurrentRevision && (n.Kind == "observation" || n.Kind == "conclusion") {
 		out.Freshness = "stale"
 	}
@@ -235,9 +233,16 @@ func (s *Service) GetNode(ctx context.Context, ns, id string, o GetNodeOptions) 
 		rs *ResourceRef
 	}
 	items := []item{}
-	for i := range st.Edges {
-		ed := &st.Edges[i]
-		if (ed.SourceID == n.ID && (ed.SourceRevision == rev || ed.Relation == "depends_on")) || (ed.TargetID == n.ID && (ed.TargetRevision == rev || ed.Relation == "depends_on")) {
+	related := func(ed *Edge) bool {
+		return (ed.SourceID == n.ID && (ed.SourceRevision == rev || ed.Relation == "depends_on")) || (ed.TargetID == n.ID && (ed.TargetRevision == rev || ed.Relation == "depends_on"))
+	}
+	for _, ed := range ix.out[n.ID] {
+		if related(ed) {
+			items = append(items, item{"e" + ed.ID, ed, nil})
+		}
+	}
+	for _, ed := range ix.in[n.ID] {
+		if ed.SourceID != n.ID && related(ed) {
 			items = append(items, item{"e" + ed.ID, ed, nil})
 		}
 	}
@@ -323,29 +328,16 @@ func (s *Service) EventsAfter(ctx context.Context, ns, id string, after int64, l
 	}
 	return EventsPage{rev, events, next}, nil
 }
-func eligible(st *State, n *Node) bool {
-	if n.Kind != "work_item" || n.Current().State != "open" {
-		return false
-	}
-	for _, ed := range st.Edges {
-		if ed.Relation == "depends_on" && ed.SourceID == n.ID {
-			p, e := findNode(st, ed.TargetID)
-			if e != nil || p.Current().State != "done" {
-				return false
-			}
-		}
-	}
-	return true
-}
 func (s *Service) ListEligibleWork(ctx context.Context, ns, id string) (NodePage, error) {
-	st, e := s.store.Read(ctx, ns, id)
+	st, e := s.read(ctx, ns, id, ReadScope{})
 	if e != nil {
 		return NodePage{}, e
 	}
+	ix := newIndex(st)
 	out := NodePage{GraphRevision: st.Graph.Revision, Nodes: []NodeSummary{}}
 	for i := range st.Nodes {
-		if eligible(st, &st.Nodes[i]) {
-			out.Nodes = append(out.Nodes, summary(st, &st.Nodes[i]))
+		if ix.eligible(&st.Nodes[i]) {
+			out.Nodes = append(out.Nodes, ix.summary(&st.Nodes[i]))
 		}
 	}
 	sort.Slice(out.Nodes, func(i, j int) bool { return out.Nodes[i].ID < out.Nodes[j].ID })
@@ -361,7 +353,7 @@ type GoalExplanation struct {
 }
 
 func (s *Service) ExplainGoal(ctx context.Context, ns, id, nodeID string) (GoalExplanation, error) {
-	st, e := s.store.Read(ctx, ns, id)
+	st, e := s.read(ctx, ns, id, ReadScope{DetailNodeID: nodeID})
 	if e != nil {
 		return GoalExplanation{}, e
 	}
@@ -424,11 +416,12 @@ func (s *Service) traverse(ctx context.Context, ns, id string, o TraversalOption
 		}
 		rels[r] = true
 	}
-	st, e := s.store.Read(ctx, ns, id)
+	st, e := s.read(ctx, ns, id, ReadScope{})
 	if e != nil {
 		return out, e
 	}
-	if _, e = findNode(st, o.NodeID); e != nil {
+	ix := newIndex(st)
+	if _, e = ix.node(o.NodeID); e != nil {
 		return out, e
 	}
 	q := queryHash(struct {
@@ -445,22 +438,26 @@ func (s *Service) traverse(ctx context.Context, ns, id string, o TraversalOption
 	found := []string{}
 	for d := 0; d < depth && len(front) > 0; d++ {
 		next := []string{}
+		visit := func(target string) {
+			if !seen[target] {
+				seen[target] = true
+				next = append(next, target)
+				found = append(found, target)
+			}
+		}
 		for _, x := range front {
-			for _, ed := range st.Edges {
-				if !rels[ed.Relation] {
-					continue
+			if direction != "in" {
+				for _, ed := range ix.out[x] {
+					if rels[ed.Relation] {
+						visit(ed.TargetID)
+					}
 				}
-				target := ""
-				if direction != "in" && ed.SourceID == x {
-					target = ed.TargetID
-				}
-				if direction != "out" && ed.TargetID == x {
-					target = ed.SourceID
-				}
-				if target != "" && !seen[target] {
-					seen[target] = true
-					next = append(next, target)
-					found = append(found, target)
+			}
+			if direction != "out" {
+				for _, ed := range ix.in[x] {
+					if rels[ed.Relation] {
+						visit(ed.SourceID)
+					}
 				}
 			}
 		}
@@ -476,8 +473,8 @@ func (s *Service) traverse(ctx context.Context, ns, id string, o TraversalOption
 	}
 	out = NodePage{GraphRevision: st.Graph.Revision, Nodes: []NodeSummary{}, Total: len(found), Omitted: len(found) - (end - pos)}
 	for _, nid := range found[pos:end] {
-		n, _ := findNode(st, nid)
-		out.Nodes = append(out.Nodes, summary(st, n))
+		n, _ := ix.node(nid)
+		out.Nodes = append(out.Nodes, ix.summary(n))
 	}
 	if end < len(found) {
 		out.NextCursor = encodeCursor(st.Graph, q, end)

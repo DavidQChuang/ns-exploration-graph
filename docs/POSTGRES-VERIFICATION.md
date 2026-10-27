@@ -74,3 +74,83 @@ $env:GRAPH_REQUIRE_POSTGRES='1'
 ```
 
 No benchmark process remains running. The earlier startup command's host shell session 16273 may still be waiting on PostgreSQL descendants due to the previous `Start-Process -Wait` behavior; the script has been corrected. Do not terminate that process tree while the database is needed. PostgreSQL remains intentionally running; inspect `pg_ctl status` before resuming.
+
+## 2026-10-27 — G3 bounded reads checkpoint (core_perf lane)
+
+This section supersedes "Current scaling boundary" for ordinary reads and the per-mutation event-history load. See docs/DECISIONS.md 004. Base commit `41752a2`; changes are uncommitted in the shared checkout at the time of measurement.
+
+Host, from `Get-CimInstance` and `go version`: AMD Ryzen 9 7900X3D, 12 cores/24 logical processors, max clock 4,401 MHz; 68,307,763,200 bytes physical RAM; Windows 11 Education 10.0.22621, 64-bit. Toolchain: go1.27.3 windows/amd64, invoked from WSL2. Database: the existing local PostgreSQL 17.11 instance on 127.0.0.1:55439. The server version was not re-queried in this run because `psql.exe` was not found next to the runtime. The database was not restarted.
+
+### What changed
+
+- **Ordinary reads:** these use `ReadScoped`. Every read issues BEGIN, the graph row, one current-revision join (`nodes` joined to `node_revisions` on the current-revision key), all edges, and COMMIT. GetNode/ExplainGoal add the detail node's history, its resource references and its acceptances. They do not read historical revisions of other nodes, unrelated resources/acceptances, or events.
+- **Mutations:** these use `UpdateRequest`. They load only the event for the request ID, through the unique `(graph_id, request_id)` index. The persistence baseline is now an identity summary instead of a full JSON clone of the aggregate.
+- **Projection and traversal:** these use a one-pass node/adjacency index (O(N+E)) instead of repeated linear scans. That covers eligibility, recursive freshness (memoized per read), traversal frontier expansion, and related records. Projection sizing is incremental with an exact-encoding fallback; work priorities are decoded once instead of inside the sort comparator. Acceptance invalidation indexes edges once per mutation.
+
+### Verification commands (actual, WSL calling Windows Go)
+
+```
+export GOCACHE=$(wslpath -w $PWD/.local/gocache) GOMODCACHE=$(wslpath -w $PWD/.local/gomodcache) GRAPH_TEST_DATABASE_URL='postgres://postgres@127.0.0.1:55439/exploration_graph_test?sslmode=disable' GRAPH_REQUIRE_POSTGRES=1 WSLENV=GOCACHE:GOMODCACHE:GRAPH_TEST_DATABASE_URL:GRAPH_REQUIRE_POSTGRES
+./.local/go/bin/go.exe vet ./...                      # graph packages: clean
+./.local/go/bin/go.exe test -count=1 ./...            # all packages ok, PostgreSQL suite executed (not skipped)
+./.local/go/bin/go.exe test -run '^$' -bench BenchmarkPostgresAggregate -benchtime=20x -count=3 -benchmem ./graph/store/postgres
+./.local/go/bin/go.exe test -run '^$' -bench BenchmarkPostgresAggregate -benchtime=1x  -count=3 -benchmem ./graph/store/postgres
+```
+
+The race detector was not run: local Go has `CGO_ENABLED=0` and no C compiler.
+
+New tests:
+- **Shared conformance suite** (`graph/conformance/bounded.go`), run on memory and PostgreSQL:
+  - `ProjectionUTF8BudgetAnchorsAndRetrieval`
+  - `CursorsCoverOnceAndRejectAfterMutation`
+  - `EventsResumeAcrossReconnectAndConcurrentWrites`
+  - `SnapshotRestoreRoundTripAndRejection`
+  - `ScopedReadsMatchCompleteAggregateReads`
+- **PostgreSQL only:**
+  - `TestPostgresRestoreRejectionLeavesNoRows`: no rows in any of the seven tables after a rejected restore or an injected failure at each of the five persistence checkpoints, and exact row counts after a successful restore.
+  - `TestPostgresReadsUseBoundedStatementSets`: statement counts are the same for 3-node and 150-node graphs; no event-history SELECT during mutations.
+- **Internal:** `TestIncrementalProjectionMatchesExactEncoding`, randomized and including multi-byte, HTML-escaped and U+2028 text. It was checked to fail when the sizer was deliberately made off by one byte.
+
+### Benchmark method
+
+The fixture is unchanged: the same synthetic independent open work items under the origin, plus one goal accepted from one observation, with fixture insertion excluded. Statement counts are now measured with a pgx `QueryTracer` and include BEGIN/COMMIT; the baseline's "6 selects" was derived from the code path, not traced. Allocation figures are Go benchmark bytes per operation, not peak RSS. These are local development measurements, not throughput promises.
+
+Invalidation methodology changed:
+- **Old benchmark:** timed a six-query full `Read` (used to look up the revision) plus the `ReviseNode`.
+- **New benchmark:** times only the `ReviseNode` that invalidates a current acceptance. It re-establishes a current acceptance with the timer stopped, so every iteration is a first invalidation. The graph grows by one revision per iteration, which explains the slight allocation drift across counts.
+
+### Results
+
+The baseline is HEAD `41752a2`, exported with `git archive` into ignored `.local/baseline-head`, run with `-benchtime=1x -count=3`. Raw output for all runs: `.local/bench-baseline-head.txt`, `.local/bench-g3-1x.txt`, `.local/bench-g3-20x.txt`. Values are the median, with the range in parentheses.
+
+| Nodes | Operation | Baseline 1x×3 | New 1x×3 | New 20x×3 | Result JSON bytes | Statements (SELECTs), new |
+|---|---|---|---|---|---|---|
+| 100 | overview | 14.29 ms (13.70–14.33), 9.04 MB | 2.89 ms (2.42–4.49), 0.56 MB | 1.70 ms (1.66–1.76), 0.55 MB, 6.9k allocs | 16,163 | 5 (3) |
+| 100 | traversal | 1.30 ms (1.12–1.49), 0.27 MB | 1.47 ms (1.47–1.51), 0.27 MB | 1.05 ms (1.01–1.05), 0.26 MB | 14,317 | 5 (3) |
+| 100 | get_node | not measured | 2.36 ms (1.86–2.73), 0.26 MB | 1.31 ms (1.20–1.38), 0.23 MB | 371–372 | 8 (6) |
+| 100 | invalidation | 3.55 ms (3.50–4.45), 0.99 MB | 4.02 ms (3.27–4.09), 0.30 MB | 2.70 ms (2.56–2.83), 0.34–0.57 MB | 96–99 | 17 (8) |
+| 1,000 | overview | 108.70 ms (98.26–179.44), 70.9 MB | 9.97 ms (7.58–11.19), 3.69 MB | 8.04 ms (7.48–8.37), 3.70 MB, 53.8k allocs | 16,167 | 5 (3) |
+| 1,000 | traversal | 4.80 ms (4.55–4.94), 2.34 MB | 4.60 ms (4.53–4.96), 2.61 MB | 4.49 ms (4.48–4.80), 2.61 MB | 14,979–14,984 | 5 (3) |
+| 1,000 | get_node | not measured | 4.76 ms (4.74–5.45), 2.43 MB | 4.62 ms (4.18–4.77), 2.42 MB | 372 | 8 (6) |
+| 1,000 | invalidation | 15.28 ms (13.54–17.57), 10.25 MB | 6.82 ms (6.77–7.47), 2.91 MB | 7.28 ms (6.71–7.49), 2.93–3.11 MB | 96–99 | 17 (8) |
+| 10,000 | overview | 1,042.99 ms (1,039.34–1,092.55), 683.3 MB, 969k allocs | 77.22 ms (66.23–83.33), 36.9 MB | 60.35 ms (59.09–62.41), 36.9 MB, 522k allocs | 16,171 | 5 (3) |
+| 10,000 | traversal | 37.86 ms (36.73–37.89), 25.1 MB, 341k allocs | 47.39 ms (46.89–50.91), 28.2 MB | 34.15 ms (34.10–35.06), 28.2 MB, 331k allocs | 14,981 | 5 (3) |
+| 10,000 | get_node | not measured | 43.00 ms (38.86–44.49), 26.0 MB | 30.82 ms (30.27–33.62), 26.0 MB | 372 | 8 (6) |
+| 10,000 | invalidation | 115.89 ms (108.77–117.55), 107.5 MB, 733k allocs | 59.45 ms (55.01–62.18), 29.5 MB | 39.49 ms (37.85–40.88), 29.5–29.7 MB, 352–355k allocs | 96–99 | 17 (8) |
+
+Statement counts:
+- **Baseline:** overview/traversal ran 6 SELECTs plus BEGIN/COMMIT. Invalidation ran 14 SELECTs: the timed lookup Read, the lock, six aggregate queries, and the full event history.
+- **New invalidation:** 17 statements per operation. The 8 SELECTs are the lock, graph, nodes, revisions, edges, resources, acceptances and request event. The other 9 are BEGIN, two revision inserts, two current-pointer updates, one acceptance update, one graph update, one event insert and COMMIT.
+- **Size independence:** statement counts no longer depend on graph size; the PostgreSQL test above asserts this.
+
+### Remaining bounds (not solved in this unit)
+
+- **Linear reads:** ordinary reads remain O(N+E) in rows transferred. They load every node's current revision, including the payload, and every edge in the graph partition. At 10,000 nodes, traversal and GetNode cost about 30–35 ms and 26–28 MB each, and did not improve over baseline. The 10k traversal allocates about 12% more because of the adjacency index, and the single-shot 1x median was slower (47 vs 38 ms).
+  - **Why not bounded:** a bounded traversal would need recursive SQL plus per-result recursive freshness (support closure) in SQL. That would create a second implementation of semantic rules, so it was not attempted without a separate equivalence plan.
+- **Overview:** a complete candidate scan is still required. The specified greedy whole-node omission can admit a later, smaller candidate after skipping a larger one. Totals and omitted counts need counts over the whole graph. Eligibility needs every prerequisite's current state. At 10,000 nodes the overview is now about 60 ms and 37 MB, dominated by the row load and summary construction.
+  - **Possible exact optimization (not implemented):** stop the scan when the remaining budget is below the minimum possible candidate size.
+- **Token counting:** when `CountTokens` is supplied, each candidate that passes the byte check is still encoded in full for token counting, which is O(candidates × result size).
+- **Mutations:** these still load the complete node history, edges, resources and acceptances per Decision 001. TransitionWork's execution-ID uniqueness check needs every historical work revision; it is the event history that is no longer loaded.
+- **Snapshots:** snapshot/export reads are whole-graph by definition. `SnapshotBytes` is enforced after loading, not before.
+- **Unbounded results:** ListEligibleWork has no limit or cursor in the current public API, so its result size is unbounded. Traversal results (up to 1,000 summaries) are not checked against the result byte limit in the core. Both would need contract decisions; neither was changed here.
+- **Memory store:** `UpdateRequest` still JSON-clones the aggregate. It exists for semantic coverage, not performance.

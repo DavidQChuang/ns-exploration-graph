@@ -82,7 +82,13 @@ func (s *Service) mutateWithLimit(ctx context.Context, c CommandContext, kind st
 	encoded, _ = json.Marshal(canonical)
 	sum := sha256.Sum256(encoded)
 	hash := hex.EncodeToString(sum[:])
-	e = s.store.Update(ctx, c.Namespace, c.GraphID, create, func(st *State) error {
+	update := s.store.Update
+	if scoped, ok := s.store.(RequestUpdater); ok {
+		update = func(ctx context.Context, ns, id string, create *Graph, fn func(*State) error) error {
+			return scoped.UpdateRequest(ctx, ns, id, create, c.RequestID, fn)
+		}
+	}
+	e = update(ctx, c.Namespace, c.GraphID, create, func(st *State) error {
 		for _, ev := range st.Events {
 			if ev.RequestID == c.RequestID {
 				if ev.RequestHash != hash {
@@ -327,38 +333,7 @@ func ref(n *Node) Ref { return Ref{n.ID, n.CurrentRevision} }
 
 // closure validates recursive freshness and returns exactly the incoming support closure.
 func closure(st *State, r Ref, seen map[string]bool) ([]string, error) {
-	n, e := current(st, r)
-	if e != nil {
-		return nil, Err("stale_evidence", "Evidence revision is no longer current.")
-	}
-	if (n.Kind != "observation" && n.Kind != "conclusion") || n.Current().State != "active" {
-		return nil, Err("stale_evidence", "Evidence is not active.")
-	}
-	if seen[n.ID] {
-		return nil, Err("cycle_detected", "Support cycle detected.")
-	}
-	if n.Kind == "observation" {
-		return []string{}, nil
-	}
-	seen[n.ID] = true
-	defer delete(seen, n.ID)
-	ids := []string{}
-	count := 0
-	for _, ed := range st.Edges {
-		if ed.Relation == "supports" && ed.TargetID == n.ID && ed.TargetRevision == r.Revision {
-			count++
-			sub, e := closure(st, Ref{ed.SourceID, ed.SourceRevision}, seen)
-			if e != nil {
-				return nil, e
-			}
-			ids = append(ids, ed.ID)
-			ids = append(ids, sub...)
-		}
-	}
-	if count == 0 {
-		return nil, Err("stale_evidence", "Conclusion has no support for this revision.")
-	}
-	return unique(ids), nil
+	return newIndex(st).closure(r, seen)
 }
 func unique(xs []string) []string {
 	m := map[string]bool{}
@@ -381,14 +356,21 @@ func edgeByID(st *State, id string) *Edge {
 	return nil
 }
 func invalidate(st *State, id, actor, reason string) {
+	var edges map[string]*Edge
 	for i := range st.Acceptances {
 		a := &st.Acceptances[i]
 		if a.State != "current" {
 			continue
 		}
+		if edges == nil {
+			edges = make(map[string]*Edge, len(st.Edges))
+			for j := range st.Edges {
+				edges[st.Edges[j].ID] = &st.Edges[j]
+			}
+		}
 		hit := a.GoalID == id
 		for _, eid := range a.SupportEdgeIDs {
-			ed := edgeByID(st, eid)
+			ed := edges[eid]
 			if ed != nil && (ed.SourceID == id || ed.TargetID == id) {
 				hit = true
 			}
