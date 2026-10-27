@@ -25,7 +25,7 @@ Use a database you can write to; the scenario migrates it and creates a fresh gr
 3. Host claims the work under a new execution ID.
 4. Worker session bound to that work and execution: spoofed `execution_id` is rejected, then it records the negative observation with a resource reference and a conclusion.
 5. Host finishes the work; the worker's next write is fenced (`stale_execution`).
-6. A fresh planner session started with `-acceptance validator` sees only the graph: it reads the conclusion and its supporting observation, resolves the resource URI with its own local resolver (evidence retrieval is the consumer's job), links the conclusion to the goal and accepts it.
+6. A fresh planner session started with `-acceptance validator` sees only the graph: it reads the conclusion and its supporting observation, resolves the resource URI with its own local resolver (evidence retrieval is the consumer's job), proposes verification work derived from the retrieved diagnosis, and asks the host to claim it. A new bound worker parses the corrected fixture input `12`, records a positive observation and a conclusion supported by both failure diagnosis and passing evidence, and the host finishes the work. The planner retrieves the passing log, links the verification conclusion to the goal and accepts it. This is a deterministic fixture input correction, not a claim that parser code changed.
 7. Host prints the normalized report.
 
 ## Ambiguous write drill
@@ -34,4 +34,4 @@ This client has no durable invocation identity, and `graph-mcp` does not either.
 
 ## Verification
 
-`examples/scripted/stdio_test.go` builds both binaries, runs this script with and without the drill against PostgreSQL, and requires its persisted end state to equal the in-process normalized state (nodes, per-node lifecycles, relations, command history, acceptance closure, graph revision).
+`examples/scripted/stdio_test.go` builds both binaries, runs this script with and without the drill against PostgreSQL, and requires its persisted end state to equal the in-process normalized state (nodes, per-node lifecycles, relations, command history, acceptance closure, graph revision). Both also match the fixed, reviewed 14-event golden report in `examples/scripted/main_test.go`; acceptance reviews four evidence nodes and both failure/passing resource references.

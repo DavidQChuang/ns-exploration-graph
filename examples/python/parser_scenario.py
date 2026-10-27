@@ -28,7 +28,9 @@ MUTATING = {"graph_propose_work", "graph_record_observation", "graph_record_conc
             "graph_add_support", "graph_accept_goal"}
 LOG = "fixture integer parser: malformed input rejected"
 RESOURCE_URI = "fixture://parser/rejection-log"
-RATIONALE = "Host reviewed the stored parser rejection log."
+RATIONALE = "Host reviewed the stored failure and passing verification logs."
+PASS_LOG = "fixture integer parser: corrected input 12 parsed as 12"
+PASS_URI = "fixture://parser/verification-log"
 
 
 class ProtocolError(Exception):
@@ -214,7 +216,6 @@ def main():
         raise AssertionError("parser unexpectedly accepted malformed input")
     except ValueError:
         pass
-    resolver = {RESOURCE_URI: LOG}  # the host/consumer owns evidence retrieval, not the graph
     observation = {
         "title": "Malformed input rejection observed", "statement": "The parser rejected twelve.",
         "evidence": LOG, "epistemic_status": "observed", "polarity": "negative",
@@ -251,6 +252,13 @@ def main():
     assert not late["ok"] and late["error"]["code"] == "stale_execution", late
     worker.close()
 
+    # Drop first-context locals: the new context receives only its graph binding.
+    resume(args, graph_id)
+
+
+def resume(args, graph_id):
+    # Resource contents belong to the host fixture resolver, not agent conversation state.
+    resolver = {RESOURCE_URI: LOG, PASS_URI: PASS_LOG}
     # --- fresh planner session with an explicit acceptance grant: knows only the graph
     planner = launch(args, graph_id, "planner", "-acceptance", "validator")
     assert "graph_accept_goal" in planner.list_tools()
@@ -265,11 +273,37 @@ def main():
             for resource in source["resource_refs"]:
                 verified = verified or resolver.get(resource["uri"]) == LOG
     assert verified, "host could not resolve the reviewed evidence"
+    verification = planner.ok("graph_propose_work", {
+        "title": "Verify parser input fix",
+        "instruction": "Verify the fixture input correction from twelve to 12; retain the passing result. This changes fixture input, not parser code.",
+        "priority": 50, "parents": [{"id": concl["id"], "revision": concl["revision"]}]})
+    work_id = verification["work_item_id"]
+    claim = host(args, "claim", "-namespace", args.namespace, "-graph", graph_id,
+                 "-work", work_id, "-revision", "1")
+    worker = launch(args, graph_id, "worker", "-work", work_id, "-execution", claim["execution_id"])
+    assert int("12") == 12  # deterministic input fix verification; no parser code fix claimed
+    passing = worker.ok("graph_record_observation", {
+        "title": "Corrected input verification passed",
+        "statement": "The fixture input correction to 12 parsed as integer 12.",
+        "evidence": PASS_LOG, "epistemic_status": "observed", "polarity": "positive",
+        "resource_refs": [{"resource_type": "test_log", "uri": PASS_URI}]})
+    verified_conclusion = worker.ok("graph_record_conclusion", {
+        "title": "Parser input fix verified",
+        "statement": "Correcting the fixture input from twelve to 12 resolves the reproduced parse failure; parser code was unchanged.",
+        "epistemic_status": "inferred", "supports": [
+            {"id": concl["id"], "revision": concl["revision"]},
+            {"id": passing["observation_id"], "revision": passing["node_revision"]}]})
+    worker.close()
+    host(args, "finish", "-namespace", args.namespace, "-graph", graph_id,
+         "-work", work_id, "-revision", "2", "-state", "done")
+    stored = planner.ok("graph_get_node", {"node_id": passing["observation_id"], "revision": passing["node_revision"]})
+    assert any(resolver.get(r["uri"]) == PASS_LOG for r in stored["resource_refs"]), "missing passing evidence"
+    concl = {"id": verified_conclusion["conclusion_id"], "revision": verified_conclusion["node_revision"]}
     support = planner.ok("graph_add_support", {"source": {"id": concl["id"], "revision": concl["revision"]},
                                                "target": {"id": goal["id"], "revision": goal["revision"]}})
     accepted = planner.ok("graph_accept_goal", {"goal": {"id": goal["id"], "revision": goal["revision"]},
                                                 "support_edge_ids": [support["edge_id"]], "rationale": RATIONALE})
-    assert len(accepted["reviewed_evidence"]) == 2 and len(accepted["reviewed_resource_ids"]) == 1, accepted
+    assert len(accepted["reviewed_evidence"]) == 4 and len(accepted["reviewed_resource_ids"]) == 2, accepted
     planner.close()
     say("planner: goal accepted (acceptance %s)" % accepted["acceptance_id"])
 

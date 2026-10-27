@@ -15,7 +15,7 @@ import (
 )
 
 // Second consumer: a Python (standard library only) MCP client drives the compiled
-// graph-mcp over stdio against real PostgreSQL and finishes the parser-failure scenario.
+// graph-mcp over stdio against real PostgreSQL and finishes the failure-to-passing-verification scenario.
 // Its persisted end state must equal the in-process (direct and MCP) normalized state.
 
 func goTool() string {
@@ -98,6 +98,9 @@ func TestPythonStdioConsumerCompletesParserScenario(t *testing.T) {
 			var got Report
 			if e := json.Unmarshal(stdout.Bytes(), &got); e != nil {
 				t.Fatalf("report: %v\n%s", e, stdout.String())
+			}
+			if !reflect.DeepEqual(got, expected) {
+				t.Fatalf("Python scenario differs from reviewed golden report: %+v", got)
 			}
 			if !reflect.DeepEqual(got, want) {
 				g, _ := json.MarshalIndent(got, "", " ")

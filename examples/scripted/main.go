@@ -103,11 +103,11 @@ func run(ctx context.Context, mode string) (Report, error) {
 	command := func() graph.CommandContext {
 		return graph.CommandContext{Namespace: b.Namespace, GraphID: b.GraphID, ActorID: b.ActorID, RequestID: graph.NewID()}
 	}
-	_, e := svc.CreateGraph(ctx, command(), graph.CreateGraphInput{Title: "Parser investigation", Request: "Verify the integer parser rejects malformed input."})
+	_, e := svc.CreateGraph(ctx, command(), graph.CreateGraphInput{Title: "Parser investigation", Request: "Reproduce malformed parser input, then verify the corrected input fixture."})
 	if e != nil {
 		return Report{}, e
 	}
-	_, e = svc.AddGoal(ctx, command(), graph.AddGoalInput{Title: "Malformed input rejected", GoalPayload: graph.GoalPayload{AcceptanceCriteria: []string{"Run malformed input and retain rejection evidence."}}})
+	_, e = svc.AddGoal(ctx, command(), graph.AddGoalInput{Title: "Corrected parser input verified", GoalPayload: graph.GoalPayload{AcceptanceCriteria: []string{"Retain failure evidence and a passing verification of corrected input 12."}}})
 	if e != nil {
 		return Report{}, e
 	}
@@ -170,7 +170,7 @@ func resume(ctx context.Context, mode string, svc *graph.Service, b toolkit.Bind
 	b.AcceptGoal = true
 	b.AcceptanceMethod = "validator"
 	policy := func(ctx context.Context, b toolkit.Binding, in graph.AcceptGoalInput) error {
-		if in.Rationale != "Host reviewed the stored parser rejection log." {
+		if in.Rationale != "Host reviewed the stored failure and passing verification logs." {
 			return fmt.Errorf("rationale not approved")
 		}
 		return nil
@@ -225,11 +225,68 @@ func resume(ctx context.Context, mode string, svc *graph.Service, b toolkit.Bind
 	if !verified {
 		return Report{}, fmt.Errorf("host could not resolve reviewed evidence")
 	}
+	// The second context receives no first-session tool returns. Its work parents and
+	// diagnostic support reference only IDs/revisions retrieved above from the graph.
+	work, e := invoke(planner, "graph_propose_work", map[string]any{"title": "Verify parser input fix", "instruction": "Verify the fixture input correction from twelve to 12; retain the passing result. This changes fixture input, not parser code.", "priority": 50, "parents": []any{map[string]any{"id": conclusion["id"], "revision": conclusion["revision"]}}}, "propose-verification")
+	if e != nil {
+		return Report{}, e
+	}
+	wid := work["work_item_id"].(string)
+	command := func() graph.CommandContext {
+		return graph.CommandContext{Namespace: b.Namespace, GraphID: b.GraphID, ActorID: b.ActorID, RequestID: graph.NewID()}
+	}
+	execution := graph.NewID()
+	if _, e = svc.TransitionWork(ctx, command(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: wid, Revision: 1}, State: "running", ExecutionID: execution}); e != nil {
+		return Report{}, e
+	}
+	wb := b
+	wb.Role, wb.AcceptGoal, wb.AcceptanceMethod = "worker", false, ""
+	wb.Execution = &graph.Execution{WorkItemID: wid, ExecutionID: execution}
+	worker, e := newSession(ctx, mode, svc, wb, nil)
+	if e != nil {
+		return Report{}, e
+	}
+	value, parseErr := strconv.Atoi("12")
+	if parseErr != nil || value != 12 {
+		worker.Close()
+		return Report{}, fmt.Errorf("corrected input verification failed")
+	}
+	log := "fixture integer parser: corrected input 12 parsed as 12"
+	uri := "fixture://parser/verification-log"
+	resolver[uri] = log
+	passing, e := invoke(worker, "graph_record_observation", map[string]any{"title": "Corrected input verification passed", "statement": "The fixture input correction to 12 parsed as integer 12.", "evidence": log, "epistemic_status": "observed", "polarity": "positive", "resource_refs": []any{map[string]any{"resource_type": "test_log", "uri": uri}}}, "observation-verification")
+	if e != nil {
+		worker.Close()
+		return Report{}, e
+	}
+	verifiedConclusion, e := invoke(worker, "graph_record_conclusion", map[string]any{"title": "Parser input fix verified", "statement": "Correcting the fixture input from twelve to 12 resolves the reproduced parse failure; parser code was unchanged.", "epistemic_status": "inferred", "supports": []any{map[string]any{"id": conclusion["id"], "revision": conclusion["revision"]}, map[string]any{"id": passing["observation_id"], "revision": passing["node_revision"]}}}, "conclusion-verification")
+	worker.Close()
+	if e != nil {
+		return Report{}, e
+	}
+	if _, e = svc.TransitionWork(ctx, command(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: wid, Revision: 2}, State: "done"}); e != nil {
+		return Report{}, e
+	}
+	// Independently retrieve the passing artifact before the policy-enabled acceptance.
+	stored, e := invoke(planner, "graph_get_node", map[string]any{"node_id": passing["observation_id"], "revision": passing["node_revision"]}, "")
+	if e != nil {
+		return Report{}, e
+	}
+	passingReviewed := false
+	for _, r := range stored["resource_refs"].([]any) {
+		if resolver[r.(map[string]any)["uri"].(string)] == log {
+			passingReviewed = true
+		}
+	}
+	if !passingReviewed {
+		return Report{}, fmt.Errorf("host could not resolve passing verification evidence")
+	}
+	conclusion = map[string]any{"id": verifiedConclusion["conclusion_id"], "revision": verifiedConclusion["node_revision"]}
 	support, e := invoke(planner, "graph_add_support", map[string]any{"source": map[string]any{"id": conclusion["id"], "revision": conclusion["revision"]}, "target": map[string]any{"id": goal["id"], "revision": goal["revision"]}}, "support-resume-1")
 	if e != nil {
 		return Report{}, e
 	}
-	accepted, e := invoke(planner, "graph_accept_goal", map[string]any{"goal": map[string]any{"id": goal["id"], "revision": goal["revision"]}, "support_edge_ids": []any{support["edge_id"]}, "rationale": "Host reviewed the stored parser rejection log."}, "accept-resume-1")
+	accepted, e := invoke(planner, "graph_accept_goal", map[string]any{"goal": map[string]any{"id": goal["id"], "revision": goal["revision"]}, "support_edge_ids": []any{support["edge_id"]}, "rationale": "Host reviewed the stored failure and passing verification logs."}, "accept-resume-1")
 	if e != nil {
 		return Report{}, e
 	}

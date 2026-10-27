@@ -6,38 +6,47 @@ import (
 	"testing"
 )
 
-// The normalized report replaces generated IDs/timestamps with titles, lifecycles and counts.
-// Direct and in-process MCP runs must agree on nodes, relations, revisions, lifecycle,
-// command history and acceptance closure, and both must equal this reviewed expectation.
+// Fixed reviewed golden state, independent of the implementation-generated reports.
 var expected = Report{
-	GraphRevision: 9,
+	GraphRevision: 14,
 	GoalState:     "met",
 	Nodes: []string{
+		"conclusion:Parser input fix verified:active",
 		"conclusion:Parser rejection verified:active",
-		"goal:Malformed input rejected:met",
+		"goal:Corrected parser input verified:met",
+		"observation:Corrected input verification passed:active",
 		"observation:Malformed input rejection observed:active",
 		"origin:Parser investigation:recorded",
 		"work_item:Reproduce malformed input:done",
+		"work_item:Verify parser input fix:done",
 	},
 	Lifecycle: []string{
+		"conclusion:Parser input fix verified:active",
 		"conclusion:Parser rejection verified:active",
-		"goal:Malformed input rejected:open>met",
+		"goal:Corrected parser input verified:open>met",
+		"observation:Corrected input verification passed:active",
 		"observation:Malformed input rejection observed:active",
 		"origin:Parser investigation:recorded",
 		"work_item:Reproduce malformed input:open>running>done",
+		"work_item:Verify parser input fix:open>running>done",
 	},
 	Relations: []string{
 		"derived_from:Parser investigation→Reproduce malformed input",
-		"spawns:Parser investigation→Malformed input rejected",
+		"derived_from:Parser rejection verified→Verify parser input fix",
+		"spawns:Parser investigation→Corrected parser input verified",
+		"supports:Corrected input verification passed→Parser input fix verified",
 		"supports:Malformed input rejection observed→Parser rejection verified",
-		"supports:Parser rejection verified→Malformed input rejected",
+		"supports:Parser input fix verified→Corrected parser input verified",
+		"supports:Parser rejection verified→Parser input fix verified",
 		"yields:Reproduce malformed input→Malformed input rejection observed",
 		"yields:Reproduce malformed input→Parser rejection verified",
+		"yields:Verify parser input fix→Corrected input verification passed",
+		"yields:Verify parser input fix→Parser input fix verified",
 	},
-	Events:            []string{"CreateGraph", "AddGoal", "ProposeWork", "TransitionWork", "RecordObservation", "RecordConclusion", "TransitionWork", "AddSupport", "AcceptGoal"},
-	Acceptances:       []string{"validator:current:Host reviewed the stored parser rejection log.:goal=Malformed input rejected@1:edges=2"},
-	ReviewedEvidence:  2,
-	ReviewedResources: 1,
+	Events:            []string{"CreateGraph", "AddGoal", "ProposeWork", "TransitionWork", "RecordObservation", "RecordConclusion", "TransitionWork", "ProposeWork", "TransitionWork", "RecordObservation", "RecordConclusion", "TransitionWork", "AddSupport", "AcceptGoal"},
+	Acceptances:       []string{"validator:current:Host reviewed the stored failure and passing verification logs.:goal=Corrected parser input verified@1:edges=4"},
+	ReviewedEvidence:  4,
+	ReviewedResources: 2,
 	ResumedFromGraph:  true,
 }
 

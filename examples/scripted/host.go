@@ -106,10 +106,10 @@ func hostMain(ctx context.Context, args []string, out io.Writer) error {
 	switch args[0] {
 	case "init":
 		*id = graph.NewID()
-		if _, e = svc.CreateGraph(ctx, command(), graph.CreateGraphInput{Title: "Parser investigation", Request: "Verify the integer parser rejects malformed input."}); e != nil {
+		if _, e = svc.CreateGraph(ctx, command(), graph.CreateGraphInput{Title: "Parser investigation", Request: "Reproduce malformed parser input, then verify the corrected input fixture."}); e != nil {
 			return e
 		}
-		g, e := svc.AddGoal(ctx, command(), graph.AddGoalInput{Title: "Malformed input rejected", GoalPayload: graph.GoalPayload{AcceptanceCriteria: []string{"Run malformed input and retain rejection evidence."}}})
+		g, e := svc.AddGoal(ctx, command(), graph.AddGoalInput{Title: "Corrected parser input verified", GoalPayload: graph.GoalPayload{AcceptanceCriteria: []string{"Retain failure evidence and a passing verification of corrected input 12."}}})
 		if e != nil {
 			return e
 		}
