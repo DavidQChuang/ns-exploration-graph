@@ -2,7 +2,7 @@
 
 A durable "exploration graph" library for agent harnesses, written in Go. It stores an investigation as typed, revisioned nodes (origin, goals, work items, observations, conclusions, hints) with typed edges, resource references and goal acceptances. A shared command service enforces the rules; two storage adapters persist it (in-memory reference store and PostgreSQL). Eight narrow, schema-validated tools expose it to models, in-process or over MCP stdio.
 
-Status: source release candidate 0.2.0. Tool contract 0.2 is approved (`"status": "approved"` in `spec/tool-contracts.json`); snapshot schema version 1 is the only supported version. Runtime verification passed for candidate commit `62c083f`; inspection of the final source archive and root delivery sign-off remain pending. Nothing has been published. Verification evidence and packaging steps are tracked in `docs/CLEAN-ENVIRONMENT.md` and `docs/RELEASE-CHECKLIST.md`.
+Status: approved local source release 0.2.0. Tool contract 0.2 is approved (`"status": "approved"` in `spec/tool-contracts.json`); snapshot schema version 1 is the only supported version. Runtime verification passed for `62c083f`; source delivery was approved after preflight inspection at `9da1e0b`. The final documentation commit will be tagged locally as `v0.2.0`; root will regenerate and recheck the distributable archives and detached checksums from that commit. Nothing has been published. See `docs/RELEASE-SIGNOFF.md` for approval and artifact details.
 
 ## What it is not
 
@@ -131,7 +131,7 @@ go vet ./... && go test -count=1 ./...
 python toolkit/generate_contracts.py --check
 ```
 
-The stdio tests build `cmd/graph-mcp` and run it as a subprocess; the Python consumer test needs Python 3.8+ (standard library only). Corrected candidate `62c083f` passed the clean matrix on Go 1.25.0 and 1.27.3: each run recorded 195 test/subtest passes, zero failures and zero skips across seven test-bearing packages, with native CGO, fresh PostgreSQL 17.11 and Python 3.12. Direct, in-process MCP and Python reports agreed on 14 events, 8 nodes, 2 work items, 4 evidence nodes and 2 resources. The patched Go 1.27.3 vulnerability scan found zero affecting vulnerabilities and zero findings in imported packages, plus one finding in an uncalled required module. These results verify runtime behavior at `62c083f`; final source-archive inspection and delivery sign-off remain. Hosted GitHub Actions has not run. See `docs/CLEAN-ENVIRONMENT.md` and `docs/RELEASE-NOTES.md`.
+The stdio tests build `cmd/graph-mcp` and run it as a subprocess; the Python consumer test needs Python 3.8+ (standard library only). Corrected source `62c083f422be2f25e538724179c9fa142bd17e91` passed the clean matrix on Go 1.25.0 and 1.27.3: each run recorded 195 test/subtest passes, zero failures and zero skips across seven test-bearing packages, with native CGO, fresh PostgreSQL 17.11 and Python 3.12. Direct, in-process MCP and Python reports agreed on 14 events, 8 nodes, 2 work items, 4 evidence nodes and 2 resources. The patched Go 1.27.3 vulnerability scan found zero affecting vulnerabilities and zero findings in imported packages, plus one finding in an uncalled required module. The 1.25.0 failure at prior candidate `ba4769a` and its correction are retained in `docs/CLEAN-ENVIRONMENT.md`. Hosted GitHub Actions has not run. See `docs/CLEAN-ENVIRONMENT.md`, `docs/RELEASE-NOTES.md` and `docs/RELEASE-SIGNOFF.md`.
 
 ## Second consumer (Python, no Go API)
 
