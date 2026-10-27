@@ -75,3 +75,11 @@
 - gap_tests (agent 9c210d16) added the five conformance subtests, docs/COMPATIBILITY.md, and draft docs/RELEASE-NOTES.md. On PostgreSQL the claim/dependency race produced both orders (claim 3, dependency 22 of 25). The memory store mutex serialized it, so only the dependency-first order appeared there. The author checked the tests fail when the production checks are removed, in a throwaway copy.
 - Root reran `go test -count=1 -run TestMemoryConformance|TestPostgresConformance ./graph ./graph/store/postgres` with PostgreSQL required: both packages passed.
 - Root then marked the concurrency, freshness, snapshot, compatibility, and release-notes checklist rows verified, and M1-09. Still open: GitHub Actions, race detector, clean install, Go 1.25 build, license scan, contract approval (still proposed), release archive, and root sign-off. Not a release.
+
+## 2026-10-27 — Codex reset recovery: remaining release gates
+
+- Resumed from the current tree at 93e054b, preserving all intervening Cursor work and its evidence. Git status is clean; old Codex agents are terminal usage-limit failures, and the repository reports no live Cursor implementation lane.
+- Authoritative usage check: ordinary usage allowed, 1% five-hour used and 16% weekly used. No reset credit or purchase was requested by this orchestrator.
+- Assigned release_environment (sol/high) to real race/minimum-compiler/fresh-source proof, boundary_tests (sol/high) to missing numeric/byte/reference limits, and release_inventory (luna/high) to licensing/provenance/source inventory.
+- WSL2 Ubuntu22.04 is available with GCC11.4 and Python3.10; the release_environment agent is provisioning an isolated verified Linux Go toolchain instead of treating absent Windows CGO as an immutable blocker.
+- Remaining release requirements stay open. Configured GitHub Actions has not executed; local equivalent verification will be recorded accurately and does not imply a remote run.

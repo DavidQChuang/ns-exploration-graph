@@ -6,6 +6,18 @@ Root role: coordinator, integrator, release auditor, and Git committer. Implemen
 
 ## Active assignments
 
+### 2026-10-27 — Codex reset recovery and release-gate work
+
+The resumed Codex thread inspected HEAD 93e054b and preserved all intervening Cursor commits. Its prior three Codex agent handles are terminal usage-limit errors; none was restarted. Actual usage now permits work. The user-authorized heartbeat remains active in this thread despite the historical handoff note below.
+
+- `/root/release_environment` — gpt-6.1-sol/high; owns scripts/ and CI environment work plus docs/CLEAN-ENVIRONMENT.md. Verifies native Linux race detector, minimum compiler, and fresh-source install using WSL2 without publication.
+- `/root/boundary_tests` — gpt-6.1-sol/high; owns remaining exact-boundary/adversarial tests and narrowly scoped enforcement fixes after reporting them.
+- `/root/release_inventory` — gpt-6-luna/high; owns dependency-license inventory, provenance evidence, and a tracked-source inventory script.
+
+Root owns commits, current logs, release-checklist updates, and final sign-off. Existing code and documented gates are authoritative; remaining work must be proven rather than reimplemented. No remote publication is authorized or necessary for local environment verification.
+
+### Historical Cursor handoff
+
 Orchestrator handoff on 2026-10-27: Cursor agent (Claude) replaced the stopped Codex session. Earlier Codex agents are not running.
 
 - Completed `core_perf` (agent bd7b6b3f) — claude-opus-5-5-medium. Delivered scoped reads, incremental projection, G3 conformance, and the 10k-node measurements. Commit 7fa9d4f. Traversal and GetNode remain linear by decision.
