@@ -13,6 +13,7 @@ import (
 func Run(t *testing.T, newStore func(t *testing.T) graph.Store) {
 	t.Helper()
 	runBounded(t, newStore)
+	runGaps(t, newStore)
 	t.Run("PersistentSliceReplayAndFencing", func(t *testing.T) {
 		s := graph.NewService(newStore(t))
 		ctx := context.Background()
