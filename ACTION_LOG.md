@@ -62,3 +62,4 @@
 - review_fixes (agent 1941b273) implemented the five resolutions. Root confirmed the extra rule in decision 009: a cited reference-only observation must list at least one resource pinned to that revision, and later attachments stay optional. That keeps the existing "acceptance resource omission" rejection without using the clock. Inline-evidence observations may omit resources; that is the accepted weakening versus the old timestamp set-equality check.
 - Root reran `go vet ./...` and `go test -count=1 ./...` with PostgreSQL and Python required. Every package passed. Race detector was not run.
 - Commit follows this entry. Independent review findings are resolved. Release-checklist audit is next. G5 remains open: no GitHub Actions run and no clean-machine install.
+- Started release_audit (agent 09a0b571) to fill docs/RELEASE-CHECKLIST.md from cited evidence only. It must not mark GitHub Actions, the race detector, or a clean-machine install as verified.
