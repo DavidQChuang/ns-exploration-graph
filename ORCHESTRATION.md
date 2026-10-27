@@ -11,7 +11,8 @@ Orchestrator handoff on 2026-10-27: Cursor agent (Claude) replaced the stopped C
 - Completed `core_perf` (agent bd7b6b3f) — claude-opus-5-5-medium. Delivered scoped reads, incremental projection, G3 conformance, and the 10k-node measurements. Commit 7fa9d4f. Traversal and GetNode remain linear by decision.
 - Completed `toolkit_mcp` (agent 5f884d15) — claude-sonnet-5-5-high. Delivered result-schema drift checks, role/error/prompt tests, stdio MCP tests, the Python second consumer, README.md, docs/INTEGRATION.md, and the CI workflow update. Commits e4d5568 and 237d1a2. GitHub Actions and a root rerun are still outstanding.
 - Completed (previous session) `requirements_docs` — delivered docs/REQUIREMENTS.md, docs/RELEASE-CHECKLIST.md, LICENSE, NOTICE. Verification status remains NOT VERIFIED until runtime evidence is recorded.
-- `reviewer` (agent 35e7e671) — claude-opus-5-5-medium; read-only correctness review of the committed tree. No edits. Release-checklist audit waits on its findings.
+- Completed `reviewer` (agent 35e7e671) — claude-opus-5-5-medium; read-only. Two medium findings and three low ones. No release claim.
+- `review_fixes` (agent pending id in the next log line) — claude-opus-5-5-medium; owns the five review resolutions in graph/, adapters/mcp/, docs/DECISIONS.md, and a README limits sentence. Does not commit.
 
 All agents share the checkout. Root stages named paths only and records commits at coherent boundaries. No agent may overwrite another lane's work or silently change the public contract.
 

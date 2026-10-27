@@ -50,3 +50,9 @@
 - Next: independent correctness review of the committed tree. Release-checklist boxes stay unchecked until that review and a checklist audit record evidence. GitHub Actions has still not run.
 
 - Started reviewer (agent 35e7e671, claude-opus-5-5-medium) read-only against the committed tree. It does not edit or commit.
+
+## 2026-10-27 — review findings
+
+- reviewer (agent 35e7e671) finished read-only at 0fca81f. No edits. It confirmed scoped reads, UpdateRequest, projection budgets, invalidation, stale_execution, cycles, restore atomicity, identity binding, and replay. It did not rerun the suite.
+- Two medium findings are assigned to fix lane agent (started immediately after this entry): MCP marks a generated-identity storage failure retryable, and snapshot import treats wall-clock order as an invariant. Three low items go with that lane: ProposeWork returns stale_evidence for a non-evidence parent; cross-namespace CreateGraph stays permission_denied by decision; the 64 KiB cap is documented as the toolkit envelope, not the duplicated MCP frame.
+- Release-checklist boxes stay unchecked.
