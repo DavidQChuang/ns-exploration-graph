@@ -36,3 +36,15 @@ ProjectContext measures each candidate incrementally: its own encoded bytes, a c
 ## 006: Storage errors do not carry driver text
 
 SPEC requires every error message to be safe and to exclude SQL and credentials. `postgres.storageError` returns `storage_unavailable` with the fixed message "Graph service is unavailable." Coded graph errors pass through unchanged. The toolkit applies the same replacement, so a storage error built with driver text cannot reach a model either.
+
+## 007: CreateGraph across namespaces returns permission_denied
+
+A CreateGraph for a graph ID that already exists in another namespace returns `permission_denied`. The store checks the namespace partition before the service can return `already_exists`, following SPEC's "verify namespace" step. `already_exists` remains the result for a different creation of that identity in the same namespace. Conformance expects this; the code is unchanged.
+
+## 008: The 64 KiB result cap measures the toolkit envelope
+
+The enforced 64 KiB cap applies to the toolkit envelope, the structured tool result. The MCP adapter also sends that envelope as text content, so the protocol frame is larger than the cap. Hosts that need a smaller on-the-wire result lower `ResultBytes`. The budget is unchanged.
+
+## 009: Snapshot import does not use wall-clock order
+
+`CreatedAt` is written by whichever process committed the record, so separate hosts or a clock step can reorder it. Import therefore does not compare timestamps. Node revision numbers and each acceptance's stored support-edge and reviewed-resource IDs define history and the acceptance closure; `CreatedAt` remains informational. Acceptance validation walks only the stored support edges: direct edges must target the evaluated goal revision, every reached conclusion needs a stored support, and every stored edge must be reached. Supports added later are not part of the closure. Each reviewed resource must be pinned to a cited evidence revision. Resources attached after acceptance need not be listed, but a cited reference-only observation revision must have a listed resource, because it always had one at decision time.

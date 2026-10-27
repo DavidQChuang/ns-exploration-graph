@@ -108,7 +108,7 @@ The graph stores inline evidence text plus resource references (type, URI, optio
 | Invocation identity | 200 characters | `toolkit` |
 | Snapshot import/export | 64 MiB | `graph.Limits.SnapshotBytes` (host API) |
 
-Over-limit input fails before any write. Boundary behavior is covered by tests in `toolkit/`.
+Over-limit input fails before any write. Boundary behavior is covered by tests in `toolkit/`. The result cap measures the structured envelope; the MCP frame also carries it as text and is larger (see DECISIONS 008).
 
 ## Versions
 

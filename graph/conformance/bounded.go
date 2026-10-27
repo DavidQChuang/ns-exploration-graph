@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 	"unicode/utf8"
 )
 
@@ -507,6 +508,122 @@ func runBounded(t *testing.T, newStore func(t *testing.T) graph.Store) {
 		}
 		if original := w.node(gid); original.Revision.State != "met" {
 			t.Fatal("restored graph mutation leaked into source")
+		}
+	})
+	t.Run("SnapshotRestoreUsesStoredClosureNotClock", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Clock origin")
+		gid := w.must(w.s.AddGoal(w.ctx, w.next(), graph.AddGoalInput{Title: "Explained", GoalPayload: graph.GoalPayload{AcceptanceCriteria: []string{"Cause known"}}})).Data["goal_id"].(string)
+		wid, wc := w.running("Probe", 20)
+		o1 := w.observe(wc, "Reviewed", "Fails", graph.ResourceInput{ResourceType: "log", URI: "urn:log:reviewed"})
+		o2 := w.observe(wc, "Later", "Also fails")
+		cid := w.must(w.s.RecordConclusion(w.ctx, w.next(), graph.RecordConclusionInput{Title: "Cause", EvidencePayload: graph.EvidencePayload{Statement: "Bug", EpistemicStatus: "inferred"}, Supports: []graph.Ref{{NodeID: o1, Revision: 1}}})).Data["conclusion_id"].(string)
+		direct := w.must(w.s.AddSupport(w.ctx, w.next(), graph.AddSupportInput{Source: graph.Ref{NodeID: cid, Revision: 1}, Target: graph.Ref{NodeID: gid, Revision: 1}})).Data["edge_id"].(string)
+		w.must(w.s.AcceptGoal(w.ctx, w.next(), graph.AcceptGoalInput{Goal: graph.Ref{NodeID: gid, Revision: 1}, SupportEdgeIDs: []string{direct}, Method: "validator", Rationale: "Checked"}))
+		late := w.must(w.s.AddSupport(w.ctx, w.next(), graph.AddSupportInput{Source: graph.Ref{NodeID: o2, Revision: 1}, Target: graph.Ref{NodeID: cid, Revision: 1}})).Data["edge_id"].(string)
+		lateResource := w.must(w.s.AttachResource(w.ctx, w.next(), graph.AttachResourceInput{Node: graph.Ref{NodeID: o1, Revision: 1}, Resource: graph.ResourceInput{ResourceType: "log", URI: "urn:log:later"}})).Data["resource_reference_id"].(string)
+		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: wid, Revision: 2}, State: "done"}))
+		exported, e := w.s.ExportSnapshot(w.ctx, w.c.Namespace, w.c.GraphID)
+		if e != nil {
+			t.Fatal(e)
+		}
+		var source graph.Snapshot
+		if e = json.Unmarshal(exported, &source); e != nil {
+			t.Fatal(e)
+		}
+		accepted := source.Acceptances[0]
+		if len(accepted.SupportEdgeIDs) != 2 || len(accepted.ReviewedResourceIDs) != 1 {
+			t.Fatalf("fixture closure %#v", accepted)
+		}
+		for _, id := range append(accepted.SupportEdgeIDs, accepted.ReviewedResourceIDs...) {
+			if id == late || id == lateResource {
+				t.Fatal("later attachment entered the acceptance")
+			}
+		}
+		restore := func(s graph.Snapshot) (graph.CommandContext, error) {
+			dest := w.next()
+			dest.Namespace, dest.GraphID = "clock", graph.NewID()
+			encoded, _ := json.Marshal(s)
+			_, e := w.s.ImportSnapshot(w.ctx, dest, encoded)
+			return dest, e
+		}
+		check := func(name string, s graph.Snapshot) {
+			t.Helper()
+			dest, e := restore(s)
+			if e != nil {
+				t.Fatalf("%s rejected: %v", name, e)
+			}
+			copied, e := w.s.Snapshot(w.ctx, dest.Namespace, dest.GraphID)
+			if e != nil || len(copied.Acceptances) != 1 {
+				t.Fatalf("%s restored acceptances: %v", name, e)
+			}
+			a, _ := json.Marshal(s.Acceptances[0])
+			b, _ := json.Marshal(copied.Acceptances[0])
+			if string(a) != string(b) {
+				t.Fatalf("%s changed the stored closure\n%s\n%s", name, a, b)
+			}
+			explained, e := w.s.ExplainGoal(w.ctx, dest.Namespace, dest.GraphID, gid)
+			if e != nil || len(explained.Acceptances) != 1 || explained.Acceptances[0].State != "current" {
+				t.Fatalf("%s restored explanation %#v %v", name, explained, e)
+			}
+		}
+		check("later support and resource", source)
+		var skewed graph.Snapshot
+		_ = json.Unmarshal(exported, &skewed)
+		goalRevisions := map[int]time.Time{}
+		for _, n := range skewed.Nodes {
+			if n.ID == gid {
+				for _, r := range n.Revisions {
+					goalRevisions[r.Revision] = r.CreatedAt
+				}
+			}
+		}
+		for i := range skewed.Edges {
+			if skewed.Edges[i].ID == direct {
+				skewed.Edges[i].CreatedAt = goalRevisions[1].Add(-time.Hour)
+			}
+		}
+		skewed.Acceptances[0].CreatedAt = goalRevisions[2].Add(-time.Hour)
+		check("skewed clocks", skewed)
+		for _, drop := range accepted.SupportEdgeIDs {
+			var bad graph.Snapshot
+			_ = json.Unmarshal(exported, &bad)
+			kept := []string{}
+			for _, id := range accepted.SupportEdgeIDs {
+				if id != drop {
+					kept = append(kept, id)
+				}
+			}
+			bad.Acceptances[0].SupportEdgeIDs = kept
+			dest, e := restore(bad)
+			if graph.ErrorCode(e) != "invalid_argument" {
+				t.Fatalf("closure without %s accepted: %v", drop, e)
+			}
+			if _, e = w.s.Snapshot(w.ctx, dest.Namespace, dest.GraphID); graph.ErrorCode(e) != "not_found" {
+				t.Fatalf("rejected restore left graph state: %v", e)
+			}
+			if _, e = w.s.EventsAfter(w.ctx, dest.Namespace, dest.GraphID, 0, 10); graph.ErrorCode(e) != "not_found" {
+				t.Fatalf("rejected restore left events: %v", e)
+			}
+		}
+	})
+	t.Run("ProposeWorkParentKinds", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Parents origin")
+		gid := w.must(w.s.AddGoal(w.ctx, w.next(), graph.AddGoalInput{Title: "Goal", GoalPayload: graph.GoalPayload{AcceptanceCriteria: []string{"Done"}}})).Data["goal_id"].(string)
+		hid := w.must(w.s.AddHint(w.ctx, w.next(), graph.AddHintInput{Title: "Hint", HintPayload: graph.HintPayload{Instruction: "Look"}})).Data["hint_id"].(string)
+		wid, wc := w.running("Probe", 10)
+		oid := w.observe(wc, "Seen", "Fails")
+		cid := w.must(w.s.RecordConclusion(w.ctx, w.next(), graph.RecordConclusionInput{Title: "Cause", EvidencePayload: graph.EvidencePayload{Statement: "Bug", EpistemicStatus: "inferred"}, Supports: []graph.Ref{{NodeID: oid, Revision: 1}}})).Data["conclusion_id"].(string)
+		w.must(w.s.RetractEvidence(w.ctx, w.next(), graph.NodeActionInput{Node: graph.Ref{NodeID: oid, Revision: 1}, Reason: "Bad log"}))
+		propose := func(parent graph.Ref) error {
+			_, e := w.s.ProposeWork(w.ctx, w.next(), graph.ProposeWorkInput{Title: "Child", WorkPayload: graph.WorkPayload{Instruction: "x"}, Parents: []graph.Ref{parent}})
+			return e
+		}
+		for code, parents := range map[string][]graph.Ref{"invalid_relation": {{NodeID: gid, Revision: 1}, {NodeID: hid, Revision: 1}, {NodeID: wid, Revision: 2}}, "stale_evidence": {{NodeID: oid, Revision: 2}, {NodeID: cid, Revision: 1}}} {
+			for _, p := range parents {
+				if e := propose(p); graph.ErrorCode(e) != code {
+					t.Fatalf("parent %s: want %s, got %v", p.NodeID, code, e)
+				}
+			}
 		}
 	})
 	t.Run("ScopedReadsMatchCompleteAggregateReads", func(t *testing.T) {

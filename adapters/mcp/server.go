@@ -39,7 +39,7 @@ func NewServer(ctx context.Context, a *toolkit.Adapter, o Options) (*sdk.Server,
 	s := sdk.NewServer(&sdk.Implementation{Name: "ns-exploration-graph", Version: "0.1.0"}, &sdk.ServerOptions{Instructions: prompt, Capabilities: &sdk.ServerCapabilities{}, SupportedProtocolVersions: []string{ProtocolVersion, "2025-11-25"}})
 	visible := map[string]bool{}
 	invoke := func(ctx context.Context, r *sdk.CallToolRequest) (*sdk.CallToolResult, error) {
-		id := ""
+		id, generated := "", false
 		if toolkit.IsMutation(r.Params.Name) {
 			if o.ResolveInvocation != nil {
 				var e error
@@ -48,10 +48,23 @@ func NewServer(ctx context.Context, a *toolkit.Adapter, o Options) (*sdk.Server,
 					return result(toolkit.Failure(graph.Err("permission_denied", "Host invocation binding failed."))), nil
 				}
 			} else {
-				id = graph.NewID()
+				id, generated = graph.NewID(), true
 			}
 		}
-		return result(a.Invoke(ctx, r.Params.Name, r.Params.Arguments, id)), nil
+		out := a.Invoke(ctx, r.Params.Name, r.Params.Arguments, id)
+		// A server-generated identity can never be replayed, and the commit may
+		// have succeeded, so a retry would create a second operation.
+		if generated && out.Error != nil && out.Error.Retryable {
+			e := *out.Error
+			e.Retryable, e.Details = false, map[string]any{"outcome": "ambiguous"}
+			for k, v := range out.Error.Details {
+				if k != "outcome" {
+					e.Details[k] = v
+				}
+			}
+			out.Error = &e
+		}
+		return result(out), nil
 	}
 	for _, d := range a.Definitions() {
 		visible[d.Name] = true

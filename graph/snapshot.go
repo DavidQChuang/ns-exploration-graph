@@ -96,12 +96,6 @@ func validateSnapshotSemantics(snap Snapshot) error {
 			if !validState(n.Kind, r.State) {
 				return snapshotInvalid("Invalid node state.")
 			}
-			if r.CreatedAt.Before(n.CreatedAt) {
-				return snapshotInvalid("Revision precedes node creation.")
-			}
-			if j > 0 && r.CreatedAt.Before(n.Revisions[j-1].CreatedAt) {
-				return snapshotInvalid("Revision timestamps are out of order.")
-			}
 			if j == 0 {
 				initial := map[string]string{"origin": "recorded", "goal": "open", "work_item": "open", "observation": "active", "conclusion": "active", "hint": "active"}
 				if r.State != initial[n.Kind] {
@@ -173,9 +167,6 @@ func validateSnapshotSemantics(snap Snapshot) error {
 			if e != nil {
 				return e
 			}
-			if ed.CreatedAt.Before(ar.CreatedAt) || ed.CreatedAt.Before(br.CreatedAt) {
-				return snapshotInvalid("Edge precedes endpoint revision.")
-			}
 			if ed.Relation == "yields" && ar.State != "running" {
 				return snapshotInvalid("Output producer revision must be running.")
 			}
@@ -194,19 +185,17 @@ func validateSnapshotSemantics(snap Snapshot) error {
 			}
 		}
 	}
-	for _, r := range st.ResourceRefs {
+	resourcesByID := map[string]*ResourceRef{}
+	for i, r := range st.ResourceRefs {
 		if !claimID(r.ID) {
 			return snapshotInvalid("Duplicate snapshot identity.")
 		}
-		_, nr, e := resolve(r.NodeID, r.NodeRevision)
-		if e != nil {
+		resourcesByID[r.ID] = &st.ResourceRefs[i]
+		if _, _, e := resolve(r.NodeID, r.NodeRevision); e != nil {
 			return e
 		}
-		if e = resourceValid(r.ResourceInput); e != nil {
+		if e := resourceValid(r.ResourceInput); e != nil {
 			return e
-		}
-		if r.CreatedAt.Before(nr.CreatedAt) {
-			return snapshotInvalid("Resource precedes revision.")
 		}
 	}
 	for _, n := range st.Nodes {
@@ -269,11 +258,17 @@ func validateSnapshotSemantics(snap Snapshot) error {
 		if result.ActorID != a.ActorID {
 			return snapshotInvalid("Acceptance actor differs from goal transition actor.")
 		}
-		if a.CreatedAt.Before(result.CreatedAt) {
-			return snapshotInvalid("Acceptance precedes resulting goal revision.")
+		stored := map[string]bool{}
+		for _, eid := range a.SupportEdgeIDs {
+			if ed := edgeByID(&st, eid); ed == nil || ed.Relation != "supports" {
+				return snapshotInvalid("Invalid reviewed support reference.")
+			}
+			stored[eid] = true
 		}
 		expected := map[string]bool{}
-		evidence := map[string]int{}
+		// evidence maps each cited revision to whether it is covered without a
+		// listed resource (inline observation evidence, or a conclusion).
+		evidence := map[Ref]bool{}
 		var walk func(string, int, map[string]bool) error
 		walk = func(id string, rev int, vis map[string]bool) error {
 			n, r, e := resolve(id, rev)
@@ -289,15 +284,18 @@ func validateSnapshotSemantics(snap Snapshot) error {
 			if vis[id] {
 				return snapshotInvalid("Acceptance support cycle.")
 			}
-			evidence[id] = rev
 			if n.Kind == "observation" {
+				var p EvidencePayload
+				_ = json.Unmarshal(r.Payload, &p)
+				evidence[Ref{id, rev}] = evidence[Ref{id, rev}] || nonempty(p.Evidence)
 				return nil
 			}
+			evidence[Ref{id, rev}] = true
 			vis[id] = true
 			defer delete(vis, id)
 			found := false
 			for _, ed := range st.Edges {
-				if ed.Relation == "supports" && ed.TargetID == id && ed.TargetRevision == rev && !ed.CreatedAt.After(a.CreatedAt) {
+				if stored[ed.ID] && ed.TargetID == id && ed.TargetRevision == rev {
 					found = true
 					expected[ed.ID] = true
 					if e := walk(ed.SourceID, ed.SourceRevision, vis); e != nil {
@@ -313,9 +311,6 @@ func validateSnapshotSemantics(snap Snapshot) error {
 		direct := 0
 		for _, eid := range a.SupportEdgeIDs {
 			ed := edgeByID(&st, eid)
-			if ed == nil || ed.Relation != "supports" || ed.CreatedAt.After(a.CreatedAt) {
-				return snapshotInvalid("Invalid reviewed support reference.")
-			}
 			if ed.TargetID == a.GoalID && ed.TargetRevision == a.EvaluatedRevision {
 				direct++
 				expected[eid] = true
@@ -332,14 +327,22 @@ func validateSnapshotSemantics(snap Snapshot) error {
 				return snapshotInvalid("Unrelated acceptance support.")
 			}
 		}
-		expectedResources := []string{}
-		for _, r := range st.ResourceRefs {
-			if rev, ok := evidence[r.NodeID]; ok && rev == r.NodeRevision && !r.CreatedAt.After(a.CreatedAt) {
-				expectedResources = append(expectedResources, r.ID)
+		// Resources may be attached after acceptance, so only listed ones are
+		// checked; a reference-only observation always had one at decision time.
+		for _, rid := range a.ReviewedResourceIDs {
+			r := resourcesByID[rid]
+			if r == nil {
+				return snapshotInvalid("Reviewed resource is not pinned to reviewed evidence.")
 			}
+			if _, ok := evidence[Ref{r.NodeID, r.NodeRevision}]; !ok {
+				return snapshotInvalid("Reviewed resource is not pinned to reviewed evidence.")
+			}
+			evidence[Ref{r.NodeID, r.NodeRevision}] = true
 		}
-		if !reflect.DeepEqual(unique(expectedResources), unique(a.ReviewedResourceIDs)) {
-			return snapshotInvalid("Reviewed resources do not match decision-time evidence.")
+		for _, reviewed := range evidence {
+			if !reviewed {
+				return snapshotInvalid("Reviewed resources omit reference-only evidence.")
+			}
 		}
 		if a.State == "current" {
 			currentAcceptances[g.ID]++

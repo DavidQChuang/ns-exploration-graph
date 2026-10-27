@@ -46,6 +46,9 @@ func (s *Service) ProposeWork(ctx context.Context, c CommandContext, p ProposeWo
 			if e != nil {
 				return nil, e
 			}
+			if n.Kind != "origin" && n.Kind != "observation" && n.Kind != "conclusion" {
+				return nil, Err("invalid_relation", "Work parents must be the origin or evidence.")
+			}
 			if n.Kind != "origin" {
 				if _, e = closure(st, r, map[string]bool{}); e != nil {
 					return nil, e

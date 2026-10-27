@@ -162,6 +162,55 @@ func TestReconnectIdentityAndGenericAmbiguity(t *testing.T) {
 		t.Fatal("generic server falsely treated reconnect as durable retry")
 	}
 }
+
+// unavailable fails one mutation and one read after the real service is set up.
+type unavailable struct {
+	*graph.Service
+	err error
+}
+
+func (u unavailable) ProposeWork(context.Context, graph.CommandContext, graph.ProposeWorkInput) (graph.Result, error) {
+	return graph.Result{}, u.err
+}
+func (u unavailable) ListNodes(context.Context, string, string, graph.ListOptions) (graph.NodePage, error) {
+	return graph.NodePage{}, u.err
+}
+func TestGeneratedIdentityStorageFailureIsAmbiguous(t *testing.T) {
+	s, real := fixture(t, "planner", nil)
+	stand := unavailable{s, graph.Err("storage_unavailable", "pq: connection reset")}
+	a, e := toolkit.New(stand, toolkit.Config{Binding: real.Binding()})
+	if e != nil {
+		t.Fatal(e)
+	}
+	args := map[string]any{"title": "t", "instruction": "i", "priority": 1}
+	out := invoke(t, connect(t, a, transport.Options{}), "graph_propose_work", args)
+	if out.Error == nil || out.Error.Code != "storage_unavailable" || out.Error.Retryable || out.Error.Details["outcome"] != "ambiguous" {
+		t.Fatalf("generated identity failure %+v", out.Error)
+	}
+	stable := transport.Options{ResolveInvocation: func(context.Context, *sdk.CallToolRequest) (string, error) { return "host-ledger-operation-2", nil }}
+	out = invoke(t, connect(t, a, stable), "graph_propose_work", args)
+	if out.Error == nil || !out.Error.Retryable || out.Error.Details != nil {
+		t.Fatalf("resolved identity lost retryability %+v", out.Error)
+	}
+	out = invoke(t, connect(t, a, transport.Options{}), "graph_list_nodes", map[string]any{})
+	if out.Error == nil || out.Error.Code != "storage_unavailable" || !out.Error.Retryable || out.Error.Details != nil {
+		t.Fatalf("read failure changed %+v", out.Error)
+	}
+	// Coded errors pass through by pointer; the stored error must stay intact.
+	coded := &graph.Error{Code: "revision_conflict", Message: "Node revision changed; read it again.", Retryable: true, Details: map[string]any{"current_revision": 3}}
+	stand.err = coded
+	a, e = toolkit.New(stand, toolkit.Config{Binding: real.Binding()})
+	if e != nil {
+		t.Fatal(e)
+	}
+	out = invoke(t, connect(t, a, transport.Options{}), "graph_propose_work", args)
+	if out.Error.Retryable || out.Error.Details["outcome"] != "ambiguous" || out.Error.Details["current_revision"] != float64(3) {
+		t.Fatalf("details dropped %+v", out.Error)
+	}
+	if !coded.Retryable || len(coded.Details) != 1 {
+		t.Fatalf("stored error mutated %+v", coded)
+	}
+}
 func TestWorkerDiscoveryAndLiveAuthorization(t *testing.T) {
 	allowed := true
 	_, a := fixture(t, "worker", func(context.Context, toolkit.Binding, string) error {
