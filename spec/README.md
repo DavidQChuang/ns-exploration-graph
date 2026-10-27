@@ -17,4 +17,4 @@ Start with [the implementation specification](SPEC.md), then [the agent integrat
 
 The snapshot schema validates its example and rejects 12 malformed variants. All eight tool input schemas validate examples, reject 49 malformed inputs, and pass role-manifest consistency checks. These are structural checks only. The SQL migration, semantic service, runtime authorization, concurrency guarantees, MCP transport, and UI have not been implemented or tested. Strict tool-result schemas are an explicit G0 deliverable.
 
-No agents have been launched and no implementation repository has been created. The next bounded assignment is G0 contract freeze followed by the G1 PostgreSQL vertical slice, as described in the development plan.
+This package describes the pre-implementation design baseline. Current implementation and agent status live in ../TASKS.md, ../ACTION_LOG.md, and ../ORCHESTRATION.md. Schema checks do not establish runtime completion.
