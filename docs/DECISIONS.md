@@ -48,3 +48,7 @@ The enforced 64 KiB cap applies to the toolkit envelope, the structured tool res
 ## 009: Snapshot import does not use wall-clock order
 
 `CreatedAt` is written by whichever process committed the record, so separate hosts or a clock step can reorder it. Import therefore does not compare timestamps. Node revision numbers and each acceptance's stored support-edge and reviewed-resource IDs define history and the acceptance closure; `CreatedAt` remains informational. Acceptance validation walks only the stored support edges: direct edges must target the evaluated goal revision, every reached conclusion needs a stored support, and every stored edge must be reached. Supports added later are not part of the closure. Each reviewed resource must be pinned to a cited evidence revision. Resources attached after acceptance need not be listed, but a cited reference-only observation revision must have a listed resource, because it always had one at decision time.
+
+## 010: Identity length counts Unicode code points
+
+Host request and durable invocation identities MUST be valid UTF-8 and contain at most 200 Unicode code points. This resolves the published "200 characters" limit consistently with JSON Schema string lengths. Memory and PostgreSQL enforce the same rule; invalid identities do not reserve an idempotency key. All command, projection, snapshot, and result size budgets continue to measure serialized UTF-8 bytes rather than character counts. The conformance suite tests exactly 200 non-ASCII characters, 201 characters, and malformed UTF-8.

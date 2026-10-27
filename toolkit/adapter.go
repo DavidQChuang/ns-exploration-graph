@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"unicode/utf8"
 
 	"ns-exploration-graph/graph"
 )
@@ -171,7 +172,7 @@ func (a *Adapter) Invoke(ctx context.Context, name string, args json.RawMessage,
 	var err error
 	c := graph.CommandContext{Namespace: b.Namespace, GraphID: b.GraphID, ActorID: b.ActorID, Execution: b.Execution}
 	if IsMutation(name) {
-		if invocation == "" || len(invocation) > 200 {
+		if invocation == "" || !utf8.ValidString(invocation) || utf8.RuneCountInString(invocation) > 200 {
 			return Failure(graph.Err("invalid_argument", "Host invocation identity is required."))
 		}
 		h := sha256.Sum256([]byte(b.GraphID + "\x00" + b.ActorID + "\x00" + invocation))

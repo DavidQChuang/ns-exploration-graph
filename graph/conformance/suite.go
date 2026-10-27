@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"ns-exploration-graph/graph"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -14,6 +15,7 @@ func Run(t *testing.T, newStore func(t *testing.T) graph.Store) {
 	t.Helper()
 	runBounded(t, newStore)
 	runGaps(t, newStore)
+	runPublishedBoundaries(t, newStore)
 	t.Run("PersistentSliceReplayAndFencing", func(t *testing.T) {
 		s := graph.NewService(newStore(t))
 		ctx := context.Background()
@@ -205,4 +207,308 @@ func Run(t *testing.T, newStore func(t *testing.T) graph.Store) {
 			t.Fatal(e)
 		}
 	})
+}
+
+// These tests exercise public limits through each actual store. Larger read
+// fixtures use one validated import instead of hundreds of unrelated writes.
+func runPublishedBoundaries(t *testing.T, newStore func(t *testing.T) graph.Store) {
+	t.Run("PublishedReadBoundsAndDefaults", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Bounds")
+		snap := w.snapshot()
+		origin := snap.Nodes[0]
+		works := make([]string, 101)
+		for i := range works {
+			works[i] = graph.NewID()
+			n := origin
+			n.ID, n.Kind = works[i], "work_item"
+			n.Revisions = append([]graph.Revision(nil), origin.Revisions...)
+			n.Revisions[0].State, n.Revisions[0].Title = "open", "Work"
+			n.Revisions[0].Payload = json.RawMessage(`{"instruction":"Inspect boundary","priority":0}`)
+			snap.Nodes = append(snap.Nodes, n)
+			snap.Edges = append(snap.Edges, graph.Edge{ID: graph.NewID(), SourceID: origin.ID, TargetID: n.ID, SourceRevision: 1, TargetRevision: 1, Relation: "derived_from", ActorID: w.c.ActorID, CreatedAt: origin.CreatedAt})
+			if i > 0 {
+				snap.Edges = append(snap.Edges, graph.Edge{ID: graph.NewID(), SourceID: works[i-1], TargetID: n.ID, Relation: "depends_on", ActorID: w.c.ActorID, CreatedAt: origin.CreatedAt})
+			}
+		}
+		b, e := json.Marshal(snap)
+		if e != nil {
+			t.Fatal(e)
+		}
+		w.c.GraphID = graph.NewID()
+		w.must(w.s.ImportSnapshot(w.ctx, w.next(), b))
+		for _, tc := range []struct{ limit, count int }{{0, 20}, {1, 1}, {100, 100}} {
+			p, e := w.s.ListNodes(w.ctx, w.c.Namespace, w.c.GraphID, graph.ListOptions{Limit: tc.limit})
+			if e != nil || len(p.Nodes) != tc.count || p.Total != 102 || p.Omitted != 102-tc.count || p.NextCursor == "" {
+				t.Fatalf("list limit %d: count=%d total=%d omitted=%d cursor=%q err=%v", tc.limit, len(p.Nodes), p.Total, p.Omitted, p.NextCursor, e)
+			}
+		}
+		for _, limit := range []int{-1, 101} {
+			if _, e := w.s.ListNodes(w.ctx, w.c.Namespace, w.c.GraphID, graph.ListOptions{Limit: limit}); graph.ErrorCode(e) != "limit_exceeded" {
+				t.Fatalf("list limit %d: %v", limit, e)
+			}
+		}
+		for _, direction := range []string{"ancestors", "descendants"} {
+			walk := w.s.Descendants
+			start := works[0]
+			if direction == "ancestors" {
+				walk, start = w.s.Ancestors, works[100]
+			}
+			for _, tc := range []struct{ depth, count int }{{0, 8}, {1, 1}, {64, 64}} {
+				p, e := walk(w.ctx, w.c.Namespace, w.c.GraphID, graph.TraversalOptions{NodeID: start, Relations: []string{"depends_on"}, Depth: tc.depth, Limit: 1000})
+				if e != nil || len(p.Nodes) != tc.count || p.Total != tc.count {
+					t.Fatalf("%s depth %d: count=%d total=%d err=%v", direction, tc.depth, len(p.Nodes), p.Total, e)
+				}
+			}
+			for _, depth := range []int{-1, 65} {
+				if _, e := walk(w.ctx, w.c.Namespace, w.c.GraphID, graph.TraversalOptions{NodeID: start, Relations: []string{"depends_on"}, Depth: depth}); graph.ErrorCode(e) != "limit_exceeded" {
+					t.Fatalf("%s depth %d: %v", direction, depth, e)
+				}
+			}
+		}
+		for _, tc := range []struct{ limit, count int }{{0, 100}, {1, 1}, {1000, 101}} {
+			p, e := w.s.Descendants(w.ctx, w.c.Namespace, w.c.GraphID, graph.TraversalOptions{NodeID: origin.ID, Relations: []string{"derived_from"}, Limit: tc.limit})
+			if e != nil || len(p.Nodes) != tc.count || p.Total != 101 || p.Omitted != 101-tc.count || (p.NextCursor != "") != (tc.count < 101) {
+				t.Fatalf("traversal limit %d: %#v %v", tc.limit, p, e)
+			}
+		}
+		for _, limit := range []int{-1, 1001} {
+			if _, e := w.s.Descendants(w.ctx, w.c.Namespace, w.c.GraphID, graph.TraversalOptions{NodeID: origin.ID, Relations: []string{"derived_from"}, Limit: limit}); graph.ErrorCode(e) != "limit_exceeded" {
+				t.Fatalf("traversal limit %d: %v", limit, e)
+			}
+		}
+	})
+	t.Run("PublishedOverviewBoundsAndDefault", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Bounds")
+		for _, budget := range []int{1024, 65536} {
+			p, e := w.s.ProjectContext(w.ctx, w.c.Namespace, w.c.GraphID, graph.ProjectionOptions{ByteBudget: budget})
+			if e != nil || len(wire(t, p)) > budget {
+				t.Fatalf("budget %d: %v", budget, e)
+			}
+		}
+		for _, budget := range []int{-1, 1023, 65537} {
+			if _, e := w.s.ProjectContext(w.ctx, w.c.Namespace, w.c.GraphID, graph.ProjectionOptions{ByteBudget: budget}); graph.ErrorCode(e) != "limit_exceeded" {
+				t.Fatalf("budget %d: %v", budget, e)
+			}
+		}
+		for i := 0; i < 3; i++ {
+			w.must(w.s.AddHint(w.ctx, w.next(), graph.AddHintInput{Title: "Large hint", HintPayload: graph.HintPayload{Instruction: strings.Repeat("界", 3000)}}))
+		}
+		implicit, e := w.s.ProjectContext(w.ctx, w.c.Namespace, w.c.GraphID, graph.ProjectionOptions{})
+		if e != nil {
+			t.Fatal(e)
+		}
+		explicit, e := w.s.ProjectContext(w.ctx, w.c.Namespace, w.c.GraphID, graph.ProjectionOptions{ByteBudget: 16384})
+		if e != nil || !reflect.DeepEqual(implicit, explicit) || !implicit.Truncated || len(wire(t, implicit)) > 16384 {
+			t.Fatalf("default overview is not bounded at 16KiB: %v", e)
+		}
+		full, e := w.s.ProjectContext(w.ctx, w.c.Namespace, w.c.GraphID, graph.ProjectionOptions{ByteBudget: 65536})
+		if e != nil || full.Truncated || len(full.Hints) != 3 {
+			t.Fatalf("large budget did not recover hints: %v", e)
+		}
+	})
+	t.Run("RequestIdentityCharactersAndCommandBytes", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Bounds")
+		if w.s.Limits.CommandBytes != 256*1024 || w.s.Limits.ResultBytes != 64*1024 || w.s.Limits.SnapshotBytes != 64*1024*1024 || w.s.Limits.MaxReferences != 100 {
+			t.Fatalf("published defaults drifted: %#v", w.s.Limits)
+		}
+		p := graph.AddHintInput{Title: "Boundary", HintPayload: graph.HintPayload{Instruction: "Inspect"}}
+		for _, id := range []string{strings.Repeat("a", 200), strings.Repeat("界", 200)} {
+			c := w.next()
+			c.RequestID = id
+			first := w.must(w.s.AddHint(w.ctx, c, p))
+			again := w.must(w.s.AddHint(w.ctx, c, p))
+			if !reflect.DeepEqual(first, again) {
+				t.Fatal("boundary identity did not replay")
+			}
+		}
+		for _, id := range []string{strings.Repeat("a", 201), strings.Repeat("界", 201), "invalid-" + string([]byte{0xff})} {
+			before := w.snapshot()
+			c := w.next()
+			c.RequestID = id
+			if _, e := w.s.AddHint(w.ctx, c, p); graph.ErrorCode(e) != "invalid_argument" {
+				t.Fatalf("invalid identity accepted: %v", e)
+			}
+			assertBoundaryUnchanged(t, w, before)
+		}
+		// Measure the public command encoding independently; padding with multibyte
+		// text distinguishes the documented UTF-8 byte cap from character count.
+		c := w.next()
+		p.Instruction = ""
+		b, e := json.Marshal(map[string]any{"context": c, "kind": "AddHint", "payload": p})
+		if e != nil {
+			t.Fatal(e)
+		}
+		padding := 256*1024 - len(b)
+		p.Instruction = strings.Repeat("界", padding/3) + strings.Repeat("x", padding%3)
+		w.must(w.s.AddHint(w.ctx, c, p))
+		c = w.next()
+		p.Instruction += "x"
+		before := w.snapshot()
+		if _, e := w.s.AddHint(w.ctx, c, p); graph.ErrorCode(e) != "limit_exceeded" {
+			t.Fatalf("256KiB+1 command: %v", e)
+		}
+		assertBoundaryUnchanged(t, w, before)
+		p.Instruction = "Retry rejected request"
+		w.must(w.s.AddHint(w.ctx, c, p))
+	})
+	t.Run("ReferenceCapsAndMutationResultAtomicity", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Bounds")
+		_, wc := w.running("Producer", 1)
+		refs := make([]graph.Ref, 100)
+		for i := range refs {
+			refs[i] = graph.Ref{NodeID: w.observe(wc, "Observation", "Measured"), Revision: 1}
+		}
+		resources := make([]graph.ResourceInput, 100)
+		for i := range resources {
+			resources[i] = graph.ResourceInput{ResourceType: "log", URI: "urn:boundary:" + graph.NewID()}
+		}
+		work := graph.ProposeWorkInput{Title: "Boundary work", WorkPayload: graph.WorkPayload{Instruction: "Inspect"}, Parents: refs}
+		if r := w.must(w.s.ProposeWork(w.ctx, w.next(), work)); len(r.Data["lineage_edge_ids"].([]any)) != 100 {
+			t.Fatal("100 parents lost lineage")
+		}
+		conclusion := graph.RecordConclusionInput{Title: "Boundary conclusion", EvidencePayload: graph.EvidencePayload{Statement: "Measured", EpistemicStatus: "inferred"}, Supports: refs, Resources: resources}
+		r := w.must(w.s.RecordConclusion(w.ctx, w.next(), conclusion))
+		if len(r.Data["support_edge_ids"].([]any)) != 100 || len(r.Data["resource_reference_ids"].([]any)) != 100 {
+			t.Fatal("100 supports/resources lost records")
+		}
+		observation := graph.RecordObservationInput{Title: "Boundary observation", EvidencePayload: graph.EvidencePayload{Statement: "Measured", Evidence: "Log", EpistemicStatus: "observed"}, Resources: resources}
+		wc.RequestID = graph.NewID()
+		r = w.must(w.s.RecordObservation(w.ctx, wc, observation))
+		// Fixed-length generated UUIDs make the next same-shape result exactly as
+		// large, without predicting any generated identifier.
+		encoded, e := json.Marshal(struct {
+			OK bool `json:"ok"`
+			graph.Result
+		}{true, r})
+		if e != nil {
+			t.Fatal(e)
+		}
+		w.s.Limits.ResultBytes = len(encoded)
+		wc.RequestID = graph.NewID()
+		at := w.must(w.s.RecordObservation(w.ctx, wc, observation))
+		encodedAt, _ := json.Marshal(struct {
+			OK bool `json:"ok"`
+			graph.Result
+		}{true, at})
+		if len(encodedAt) != len(encoded) {
+			t.Fatal("result fixture size changed")
+		}
+		w.s.Limits.ResultBytes--
+		before := w.snapshot()
+		wc.RequestID = graph.NewID()
+		if _, e := w.s.RecordObservation(w.ctx, wc, observation); graph.ErrorCode(e) != "limit_exceeded" {
+			t.Fatalf("result one byte over configured cap: %v", e)
+		}
+		assertBoundaryUnchanged(t, w, before)
+		w.s.Limits.ResultBytes = 65536
+		w.must(w.s.RecordObservation(w.ctx, wc, observation))
+		for _, tc := range []struct {
+			name, code string
+			invoke     func(graph.CommandContext) (graph.Result, error)
+		}{
+			{"parents", "invalid_argument", func(c graph.CommandContext) (graph.Result, error) {
+				p := work
+				p.Parents = append(append([]graph.Ref(nil), refs...), refs[0])
+				return w.s.ProposeWork(w.ctx, c, p)
+			}},
+			{"supports", "limit_exceeded", func(c graph.CommandContext) (graph.Result, error) {
+				p := conclusion
+				p.Supports = append(append([]graph.Ref(nil), refs...), refs[0])
+				return w.s.RecordConclusion(w.ctx, c, p)
+			}},
+			{"conclusion resources", "limit_exceeded", func(c graph.CommandContext) (graph.Result, error) {
+				p := conclusion
+				p.Resources = append(append([]graph.ResourceInput(nil), resources...), resources[0])
+				return w.s.RecordConclusion(w.ctx, c, p)
+			}},
+			{"observation resources", "limit_exceeded", func(c graph.CommandContext) (graph.Result, error) {
+				p := observation
+				p.Resources = append(append([]graph.ResourceInput(nil), resources...), resources[0])
+				c.Execution = wc.Execution
+				return w.s.RecordObservation(w.ctx, c, p)
+			}},
+		} {
+			before := w.snapshot()
+			c := w.next()
+			if _, e := tc.invoke(c); graph.ErrorCode(e) != tc.code {
+				t.Fatalf("101 %s: %v", tc.name, e)
+			}
+			assertBoundaryUnchanged(t, w, before)
+			w.must(w.s.AddHint(w.ctx, c, graph.AddHintInput{Title: "Rejected key reusable", HintPayload: graph.HintPayload{Instruction: tc.name}}))
+		}
+		// An invalid final resource exercises rollback after the node, support
+		// edges, and earlier references have already been assembled.
+		before = w.snapshot()
+		invalid := conclusion
+		invalid.Resources = append([]graph.ResourceInput(nil), resources...)
+		invalid.Resources[99].URI = "not an absolute URI"
+		c := w.next()
+		if _, e := w.s.RecordConclusion(w.ctx, c, invalid); graph.ErrorCode(e) != "invalid_argument" {
+			t.Fatalf("invalid final resource: %v", e)
+		}
+		assertBoundaryUnchanged(t, w, before)
+		w.must(w.s.RecordConclusion(w.ctx, c, conclusion))
+		goal := w.must(w.s.AddGoal(w.ctx, w.next(), graph.AddGoalInput{Title: "Boundary goal", GoalPayload: graph.GoalPayload{AcceptanceCriteria: []string{"Checked all observations"}}})).Data["goal_id"].(string)
+		edges := make([]string, 100)
+		for i, source := range refs {
+			edges[i] = w.must(w.s.AddSupport(w.ctx, w.next(), graph.AddSupportInput{Source: source, Target: graph.Ref{NodeID: goal, Revision: 1}})).Data["edge_id"].(string)
+		}
+		accept := graph.AcceptGoalInput{Goal: graph.Ref{NodeID: goal, Revision: 1}, SupportEdgeIDs: append(append([]string(nil), edges...), graph.NewID()), Method: "validator", Rationale: "Checked all observations"}
+		before = w.snapshot()
+		c = w.next()
+		if _, e := w.s.AcceptGoal(w.ctx, c, accept); graph.ErrorCode(e) != "invalid_argument" {
+			t.Fatalf("101 direct supports: %v", e)
+		}
+		assertBoundaryUnchanged(t, w, before)
+		accept.SupportEdgeIDs = edges
+		w.must(w.s.AcceptGoal(w.ctx, c, accept))
+	})
+	t.Run("SnapshotByteBoundariesAreAtomic", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Bounds")
+		b, e := w.s.ExportSnapshot(w.ctx, w.c.Namespace, w.c.GraphID)
+		if e != nil {
+			t.Fatal(e)
+		}
+		// A tiny valid document padded with legal JSON whitespace reaches the
+		// actual 64MiB import boundary without millions of graph objects or rows.
+		at := make([]byte, 64*1024*1024)
+		copy(at, b)
+		for i := len(b); i < len(at); i++ {
+			at[i] = ' '
+		}
+		c := w.next()
+		c.GraphID = graph.NewID()
+		w.must(w.s.ImportSnapshot(w.ctx, c, at))
+		c = w.next()
+		c.GraphID = graph.NewID()
+		if _, e := w.s.ImportSnapshot(w.ctx, c, append(at, ' ')); graph.ErrorCode(e) != "limit_exceeded" {
+			t.Fatalf("64MiB+1 import: %v", e)
+		}
+		if _, e := w.s.Snapshot(w.ctx, c.Namespace, c.GraphID); graph.ErrorCode(e) != "not_found" {
+			t.Fatalf("rejected import left graph: %v", e)
+		}
+		w.must(w.s.ImportSnapshot(w.ctx, c, b))
+		// Export uses the same configured byte gate. The exact serialized source
+		// fits; one byte less rejects without returning a partial document.
+		w.s.Limits.SnapshotBytes = len(b)
+		atExport, e := w.s.ExportSnapshot(w.ctx, w.c.Namespace, w.c.GraphID)
+		if e != nil || string(atExport) != string(b) {
+			t.Fatalf("export at exact cap: %v", e)
+		}
+		w.s.Limits.SnapshotBytes--
+		if partial, e := w.s.ExportSnapshot(w.ctx, w.c.Namespace, w.c.GraphID); graph.ErrorCode(e) != "limit_exceeded" || len(partial) != 0 {
+			t.Fatalf("export over cap: bytes=%d err=%v", len(partial), e)
+		}
+	})
+}
+
+func assertBoundaryUnchanged(t *testing.T, w *world, before graph.Snapshot) {
+	t.Helper()
+	if !reflect.DeepEqual(before, w.snapshot()) {
+		t.Fatal("rejected boundary command changed graph")
+	}
+	events, e := w.s.EventsAfter(w.ctx, w.c.Namespace, w.c.GraphID, before.Graph.Revision, 1000)
+	if e != nil || len(events.Events) != 0 || events.GraphRevision != before.Graph.Revision {
+		t.Fatalf("rejected boundary command wrote events: %#v %v", events, e)
+	}
 }

@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -49,7 +50,7 @@ type Service struct {
 func NewService(store Store) *Service { return &Service{store: store, Limits: DefaultLimits()} }
 func (s *Service) Store() Store       { return s.store }
 func validateContext(c CommandContext) error {
-	if !ValidID(c.GraphID) || !nonempty(c.Namespace) || !nonempty(c.ActorID) || !nonempty(c.RequestID) || len(c.RequestID) > 200 {
+	if !ValidID(c.GraphID) || !nonempty(c.Namespace) || !nonempty(c.ActorID) || !nonempty(c.RequestID) || !utf8.ValidString(c.RequestID) || utf8.RuneCountInString(c.RequestID) > 200 {
 		return Err("invalid_argument", "Valid graph, namespace, actor and request identity are required.")
 	}
 	return nil
