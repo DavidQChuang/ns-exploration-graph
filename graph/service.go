@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -312,11 +311,10 @@ func addEdge(st *State, a, b Ref, relation, actor string) (string, error) {
 	return id, nil
 }
 func resourceValid(r ResourceInput) error {
-	u, e := url.Parse(r.URI)
-	if !nonempty(r.ResourceType) || e != nil || u.Scheme == "" || (r.SHA256 != "" && !digestPattern.MatchString(r.SHA256)) {
+	if !nonempty(r.ResourceType) || (r.SHA256 != "" && !digestPattern.MatchString(r.SHA256)) {
 		return Err("invalid_argument", "Invalid resource reference.")
 	}
-	return nil
+	return validateResourceURI(r.URI)
 }
 func resources(st *State, n Ref, rs []ResourceInput, actor string) ([]string, error) {
 	ids := []string{}

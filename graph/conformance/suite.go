@@ -16,6 +16,7 @@ func Run(t *testing.T, newStore func(t *testing.T) graph.Store) {
 	runBounded(t, newStore)
 	runGaps(t, newStore)
 	runPublishedBoundaries(t, newStore)
+	runHostLifecycle(t, newStore)
 	t.Run("PersistentSliceReplayAndFencing", func(t *testing.T) {
 		s := graph.NewService(newStore(t))
 		ctx := context.Background()
@@ -511,4 +512,337 @@ func assertBoundaryUnchanged(t *testing.T, w *world, before graph.Snapshot) {
 	if e != nil || len(events.Events) != 0 || events.GraphRevision != before.Graph.Revision {
 		t.Fatalf("rejected boundary command wrote events: %#v %v", events, e)
 	}
+}
+
+func runHostLifecycle(t *testing.T, newStore func(t *testing.T) graph.Store) {
+	runHostGoalLifecycle(t, newStore)
+	runHostDependencyAndHintLifecycle(t, newStore)
+	runHostGraphLifecycle(t, newStore)
+	t.Run("HostResourceURIsMatchPortableContract", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Resource origin")
+		producer, wc := w.running("Probe", 1)
+		oid := w.observe(wc, "Observed", "Measured")
+		valid := graph.ResourceInput{ResourceType: "log", URI: "urn:log:valid%20escaped"}
+		for _, uri := range []string{"http://[not-ipv6]/log", "http://::1/log", "https://example.com/%zz", "relative/log", "urn:log:\ncontrol"} {
+			for _, command := range []string{"RecordObservation", "RecordConclusion", "AttachResource"} {
+				before := w.snapshot()
+				c := w.next()
+				resource := valid
+				resource.URI = uri
+				var e error
+				switch command {
+				case "RecordObservation":
+					c.Execution = wc.Execution
+					_, e = w.s.RecordObservation(w.ctx, c, graph.RecordObservationInput{Title: "Invalid resource", EvidencePayload: graph.EvidencePayload{Statement: "Measured", Evidence: "Log", EpistemicStatus: "observed"}, Resources: []graph.ResourceInput{valid, resource}})
+				case "RecordConclusion":
+					_, e = w.s.RecordConclusion(w.ctx, c, graph.RecordConclusionInput{Title: "Invalid resource", EvidencePayload: graph.EvidencePayload{Statement: "Measured", EpistemicStatus: "inferred"}, Supports: []graph.Ref{{NodeID: oid, Revision: 1}}, Resources: []graph.ResourceInput{valid, resource}})
+				case "AttachResource":
+					_, e = w.s.AttachResource(w.ctx, c, graph.AttachResourceInput{Node: graph.Ref{NodeID: oid, Revision: 1}, Resource: resource})
+				}
+				if e == nil {
+					w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: producer, Revision: 2}, State: "done"}))
+					encoded, exportErr := w.s.ExportSnapshot(w.ctx, w.c.Namespace, w.c.GraphID)
+					_, validationErr := graph.ValidateSnapshot(encoded)
+					t.Fatalf("%s accepted invalid URI %q: export=%v validation=%v", command, uri, exportErr, validationErr)
+				}
+				if graph.ErrorCode(e) != "invalid_argument" {
+					t.Fatalf("%s accepted invalid URI %q: %v", command, uri, e)
+				}
+				assertBoundaryUnchanged(t, w, before)
+				w.must(w.s.AttachResource(w.ctx, c, graph.AttachResourceInput{Node: graph.Ref{NodeID: oid, Revision: 1}, Resource: valid}))
+			}
+		}
+		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: producer, Revision: 2}, State: "done"}))
+		exported, e := w.s.ExportSnapshot(w.ctx, w.c.Namespace, w.c.GraphID)
+		if e != nil {
+			t.Fatal(e)
+		}
+		if _, e = graph.ValidateSnapshot(exported); e != nil {
+			t.Fatalf("host-accepted resource did not validate portably: %v", e)
+		}
+		dest := w.next()
+		dest.GraphID = graph.NewID()
+		w.must(w.s.ImportSnapshot(w.ctx, dest, exported))
+	})
+}
+
+func runHostGoalLifecycle(t *testing.T, newStore func(t *testing.T) graph.Store) {
+	for _, tc := range []struct{ command, from, to string }{
+		{"ReopenGoal", "met", "open"}, {"ReopenGoal", "abandoned", "open"}, {"ReopenGoal", "needs_review", "open"},
+		{"AbandonGoal", "open", "abandoned"}, {"AbandonGoal", "met", "abandoned"}, {"AbandonGoal", "needs_review", "abandoned"},
+	} {
+		t.Run("HostGoalLifecycle/"+tc.command+"/"+tc.from, func(t *testing.T) {
+			w := newWorld(t, newStore(t), "Goal lifecycle")
+			var gid string
+			if tc.from == "met" || tc.from == "needs_review" {
+				_, wc := w.running("Probe", 1)
+				oid := w.observe(wc, "Observed", "Measured")
+				gid, _ = w.accepted(wc, "Reviewed goal", oid)
+				if tc.from == "needs_review" {
+					w.must(w.s.RetractEvidence(w.ctx, w.next(), graph.NodeActionInput{Node: graph.Ref{NodeID: oid, Revision: 1}, Reason: "Evidence withdrawn"}))
+				}
+			} else {
+				gid = w.must(w.s.AddGoal(w.ctx, w.next(), graph.AddGoalInput{Title: "Goal", GoalPayload: graph.GoalPayload{AcceptanceCriteria: []string{"Review evidence"}}})).Data["goal_id"].(string)
+				if tc.from == "abandoned" {
+					w.must(w.s.AbandonGoal(w.ctx, w.next(), graph.NodeActionInput{Node: graph.Ref{NodeID: gid, Revision: 1}, Reason: "Deferred"}))
+				}
+			}
+			before, e := w.s.ExplainGoal(w.ctx, w.c.Namespace, w.c.GraphID, gid)
+			if e != nil || before.Goal.Current().State != tc.from {
+				t.Fatalf("start state: %#v %v", before, e)
+			}
+			call := w.s.ReopenGoal
+			if tc.command == "AbandonGoal" {
+				call = w.s.AbandonGoal
+			}
+			c := w.next()
+			p := graph.NodeActionInput{Node: graph.Ref{NodeID: gid, Revision: before.Goal.CurrentRevision}, Reason: "Explicit host decision"}
+			r := w.must(call(w.ctx, c, p))
+			after, e := w.s.ExplainGoal(w.ctx, w.c.Namespace, w.c.GraphID, gid)
+			if e != nil || r.GraphRevision != before.GraphRevision+1 || after.Goal.CurrentRevision != before.Goal.CurrentRevision+1 || after.Goal.Current().State != tc.to || len(after.Goal.Revisions) != len(before.Goal.Revisions)+1 {
+				t.Fatalf("transition must add exactly one revision: %#v %v", after, e)
+			}
+			if !reflect.DeepEqual(before.Goal.Revisions, after.Goal.Revisions[:len(before.Goal.Revisions)]) || string(before.Goal.Current().Payload) != string(after.Goal.Current().Payload) || before.Goal.Current().Title != after.Goal.Current().Title {
+				t.Fatal("goal action rewrote historical revisions or criteria")
+			}
+			if len(after.Acceptances) != len(before.Acceptances) {
+				t.Fatal("goal action removed or fabricated acceptance history")
+			}
+			for i, old := range before.Acceptances {
+				got := after.Acceptances[i]
+				if got.State != "stale" || got.StaleReason == "" {
+					t.Fatalf("acceptance remains current: %#v", got)
+				}
+				got.State, got.StaleReason = old.State, old.StaleReason
+				if !reflect.DeepEqual(old, got) {
+					t.Fatal("goal action rewrote reviewed acceptance identity/evidence")
+				}
+			}
+			events, e := w.s.EventsAfter(w.ctx, w.c.Namespace, w.c.GraphID, before.GraphRevision, 10)
+			if e != nil || len(events.Events) != 1 || events.Events[0].CommandKind != tc.command || events.Events[0].RequestID != c.RequestID || events.Events[0].ActorID != c.ActorID || !reflect.DeepEqual(events.Events[0].Result, r) {
+				t.Fatalf("goal action audit event: %#v %v", events, e)
+			}
+			w.must(w.s.AddHint(w.ctx, w.next(), graph.AddHintInput{Title: "Later mutation", HintPayload: graph.HintPayload{Instruction: "Review"}}))
+			committed := w.snapshot()
+			if replay := w.must(call(w.ctx, c, p)); !reflect.DeepEqual(replay, r) {
+				t.Fatal("goal action replay changed")
+			}
+			assertBoundaryUnchanged(t, w, committed)
+			changed := p
+			changed.Reason = "Different decision"
+			if _, e := call(w.ctx, c, changed); graph.ErrorCode(e) != "idempotency_conflict" {
+				t.Fatalf("changed retry: %v", e)
+			}
+			assertBoundaryUnchanged(t, w, committed)
+			rejectHostMutation(t, w, "revision_conflict", func(c graph.CommandContext) (graph.Result, error) { return call(w.ctx, c, p) })
+			p.Node.Revision++
+			rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) { return call(w.ctx, c, p) })
+			origin := ""
+			for _, n := range w.snapshot().Nodes {
+				if n.Kind == "origin" {
+					origin = n.ID
+				}
+			}
+			rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) {
+				return call(w.ctx, c, graph.NodeActionInput{Node: graph.Ref{NodeID: origin, Revision: 1}})
+			})
+			if tc.command == "AbandonGoal" && tc.from == "met" {
+				w.must(w.s.ReopenGoal(w.ctx, w.next(), graph.NodeActionInput{Node: p.Node, Reason: "Resume review"}))
+				_, acceptances := w.explain(gid)
+				for _, state := range acceptances {
+					if state != "stale" {
+						t.Fatal("reopening abandoned goal resurrected acceptance")
+					}
+				}
+			}
+		})
+	}
+}
+
+func runHostDependencyAndHintLifecycle(t *testing.T, newStore func(t *testing.T) graph.Store) {
+	t.Run("HostRemoveDependencyRestoresEligibilityWithoutRevisingWork", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Dependency lifecycle")
+		dependent, prerequisite := w.open("Dependent"), w.open("Prerequisite")
+		p := graph.DependencyInput{Dependent: graph.Ref{NodeID: dependent, Revision: 1}, PrerequisiteID: prerequisite}
+		added := w.must(w.s.AddDependency(w.ctx, w.next(), p))
+		eligible := func(id string) bool {
+			page, e := w.s.ListEligibleWork(w.ctx, w.c.Namespace, w.c.GraphID)
+			if e != nil {
+				t.Fatal(e)
+			}
+			for _, n := range page.Nodes {
+				if n.ID == id {
+					return true
+				}
+			}
+			return false
+		}
+		if eligible(dependent) || !eligible(prerequisite) {
+			t.Fatal("undone prerequisite did not block only dependent work")
+		}
+		rejectHostMutation(t, w, "revision_conflict", func(c graph.CommandContext) (graph.Result, error) {
+			q := p
+			q.Dependent.Revision = 2
+			return w.s.RemoveDependency(w.ctx, c, q)
+		})
+		rejectHostMutation(t, w, "not_found", func(c graph.CommandContext) (graph.Result, error) {
+			q := p
+			q.PrerequisiteID = graph.NewID()
+			return w.s.RemoveDependency(w.ctx, c, q)
+		})
+		before := w.snapshot()
+		c := w.next()
+		removed := w.must(w.s.RemoveDependency(w.ctx, c, p))
+		after := w.snapshot()
+		if removed.Data["edge_id"] != added.Data["edge_id"] || removed.GraphRevision != before.Graph.Revision+1 || !reflect.DeepEqual(before.Nodes, after.Nodes) || len(w.dependsOn(dependent)) != 0 || !eligible(dependent) {
+			t.Fatal("dependency removal changed nodes, wrong edge, or did not restore eligibility")
+		}
+		// Readding the same logical dependency gives a new edge. Replaying the
+		// earlier removal must return its original result without deleting it.
+		newEdge := w.must(w.s.AddDependency(w.ctx, w.next(), p)).Data["edge_id"].(string)
+		committed := w.snapshot()
+		if replay := w.must(w.s.RemoveDependency(w.ctx, c, p)); !reflect.DeepEqual(replay, removed) {
+			t.Fatal("dependency replay changed")
+		}
+		assertBoundaryUnchanged(t, w, committed)
+		if edges := w.dependsOn(dependent); len(edges) != 1 || edges[0].ID != newEdge {
+			t.Fatal("replay removed the replacement edge")
+		}
+		w.must(w.s.RemoveDependency(w.ctx, w.next(), p))
+		rejectHostMutation(t, w, "not_found", func(c graph.CommandContext) (graph.Result, error) { return w.s.RemoveDependency(w.ctx, c, p) })
+		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: p.Dependent, State: "running", ExecutionID: graph.NewID()}))
+		running := p
+		running.Dependent.Revision = 2
+		rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) { return w.s.RemoveDependency(w.ctx, c, running) })
+		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: dependent, Revision: 2}, State: "paused"}))
+		q := p
+		q.Dependent.Revision = 3
+		rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) { return w.s.RemoveDependency(w.ctx, c, q) })
+		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: q.Dependent, State: "open"}))
+		q.Dependent.Revision = 4
+		w.must(w.s.AddDependency(w.ctx, w.next(), q))
+		w.must(w.s.RemoveDependency(w.ctx, w.next(), q))
+		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: q.Dependent, State: "running", ExecutionID: graph.NewID()}))
+		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: dependent, Revision: 5}, State: "done"}))
+		q.Dependent.Revision = 6
+		rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) { return w.s.RemoveDependency(w.ctx, c, q) })
+	})
+	t.Run("HostConsumedHintsAndRetractedEvidenceStayImmutable", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Terminal nodes")
+		hint := w.must(w.s.AddHint(w.ctx, w.next(), graph.AddHintInput{Title: "Hint", HintPayload: graph.HintPayload{Instruction: "Inspect"}})).Data["hint_id"].(string)
+		_, wc := w.running("Probe", 1)
+		oid := w.observe(wc, "Observed", "Measured")
+		for _, tc := range []struct {
+			id     string
+			action func(context.Context, graph.CommandContext, graph.NodeActionInput) (graph.Result, error)
+			state  string
+		}{{hint, w.s.ConsumeHint, "consumed"}, {oid, w.s.RetractEvidence, "retracted"}} {
+			old := w.node(tc.id)
+			p := graph.NodeActionInput{Node: graph.Ref{NodeID: tc.id, Revision: 1}, Reason: "Host reviewed"}
+			c := w.next()
+			r := w.must(tc.action(w.ctx, c, p))
+			node := w.node(tc.id)
+			if node.Revision.State != tc.state || node.Revision.Revision != 2 || node.Revision.Title != old.Revision.Title || string(node.Revision.Payload) != string(old.Revision.Payload) {
+				t.Fatal("terminal action changed immutable content")
+			}
+			historical, e := w.s.GetRevision(w.ctx, w.c.Namespace, w.c.GraphID, graph.Ref{NodeID: tc.id, Revision: 1})
+			if e != nil || !reflect.DeepEqual(historical.Revision, old.Revision) {
+				t.Fatalf("old revision changed: %#v %v", historical, e)
+			}
+			before := w.snapshot()
+			if replay := w.must(tc.action(w.ctx, c, p)); !reflect.DeepEqual(replay, r) {
+				t.Fatal("terminal action retry changed")
+			}
+			assertBoundaryUnchanged(t, w, before)
+			wrongActor := c
+			wrongActor.ActorID = "different-host-actor"
+			if _, e := tc.action(w.ctx, wrongActor, p); graph.ErrorCode(e) != "idempotency_conflict" {
+				t.Fatalf("wrong-context replay: %v", e)
+			}
+			assertBoundaryUnchanged(t, w, before)
+			p.Node.Revision = 2
+			rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) { return tc.action(w.ctx, c, p) })
+			rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) {
+				return w.s.ReviseNode(w.ctx, c, graph.ReviseNodeInput{Node: p.Node, Title: "Reactivate", Payload: node.Revision.Payload})
+			})
+		}
+		origin := ""
+		for _, n := range w.snapshot().Nodes {
+			if n.Kind == "origin" {
+				origin = n.ID
+			}
+		}
+		rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) {
+			return w.s.ConsumeHint(w.ctx, c, graph.NodeActionInput{Node: graph.Ref{NodeID: origin, Revision: 1}})
+		})
+		rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) {
+			return w.s.ReviseNode(w.ctx, c, graph.ReviseNodeInput{Node: graph.Ref{NodeID: origin, Revision: 1}, Title: "Changed origin", Payload: json.RawMessage(`{"request":"Changed"}`)})
+		})
+	})
+}
+
+func runHostGraphLifecycle(t *testing.T, newStore func(t *testing.T) graph.Store) {
+	t.Run("HostGraphLifecycleAndExpectedRevisionReplay", func(t *testing.T) {
+		w := newWorld(t, newStore(t), "Graph lifecycle")
+		rejectHostMutation(t, w, "already_exists", func(c graph.CommandContext) (graph.Result, error) {
+			return w.s.CreateGraph(w.ctx, c, graph.CreateGraphInput{Title: "Duplicate", Request: "Duplicate"})
+		})
+		expected := w.snapshot().Graph.Revision
+		c := w.next()
+		c.ExpectedGraphRevision = &expected
+		p := graph.AddHintInput{Title: "Optimistic write", HintPayload: graph.HintPayload{Instruction: "Review"}}
+		r := w.must(w.s.AddHint(w.ctx, c, p))
+		before := w.snapshot()
+		if replay := w.must(w.s.AddHint(w.ctx, c, p)); !reflect.DeepEqual(replay, r) {
+			t.Fatal("committed replay rejected its now-stale expected graph revision")
+		}
+		assertBoundaryUnchanged(t, w, before)
+		rejected := rejectHostMutation(t, w, "revision_conflict", func(c graph.CommandContext) (graph.Result, error) {
+			c.ExpectedGraphRevision = &expected
+			return w.s.AddHint(w.ctx, c, p)
+		})
+		current := before.Graph.Revision
+		rejected.ExpectedGraphRevision = &current
+		w.must(w.s.AddHint(w.ctx, rejected, p))
+		work, _ := w.running("Running", 1)
+		rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) {
+			return w.s.SetGraphState(w.ctx, c, graph.SetGraphStateInput{State: "closed"})
+		})
+		w.must(w.s.TransitionWork(w.ctx, w.next(), graph.TransitionWorkInput{Node: graph.Ref{NodeID: work, Revision: 2}, State: "done"}))
+		w.must(w.s.SetGraphState(w.ctx, w.next(), graph.SetGraphStateInput{State: "closed"}))
+		rejectHostMutation(t, w, "graph_read_only", func(c graph.CommandContext) (graph.Result, error) { return w.s.AddHint(w.ctx, c, p) })
+		rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) {
+			return w.s.SetGraphState(w.ctx, c, graph.SetGraphStateInput{State: "closed"})
+		})
+		w.must(w.s.SetGraphState(w.ctx, w.next(), graph.SetGraphStateInput{State: "active"}))
+		w.must(w.s.AddHint(w.ctx, w.next(), p))
+		rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) {
+			return w.s.SetGraphState(w.ctx, c, graph.SetGraphStateInput{State: "archived"})
+		})
+		w.must(w.s.SetGraphState(w.ctx, w.next(), graph.SetGraphStateInput{State: "closed"}))
+		w.must(w.s.SetGraphState(w.ctx, w.next(), graph.SetGraphStateInput{State: "archived"}))
+		rejectHostMutation(t, w, "graph_read_only", func(c graph.CommandContext) (graph.Result, error) { return w.s.AddHint(w.ctx, c, p) })
+		for _, state := range []string{"active", "closed", "archived"} {
+			rejectHostMutation(t, w, "invalid_transition", func(c graph.CommandContext) (graph.Result, error) {
+				return w.s.SetGraphState(w.ctx, c, graph.SetGraphStateInput{State: state})
+			})
+		}
+		if _, e := w.s.ListNodes(w.ctx, w.c.Namespace, w.c.GraphID, graph.ListOptions{}); e != nil {
+			t.Fatalf("archived graph not readable: %v", e)
+		}
+		if replay := w.must(w.s.AddHint(w.ctx, c, p)); !reflect.DeepEqual(replay, r) {
+			t.Fatal("archived graph lost a committed retry")
+		}
+	})
+}
+
+func rejectHostMutation(t *testing.T, w *world, code string, call func(graph.CommandContext) (graph.Result, error)) graph.CommandContext {
+	t.Helper()
+	before := w.snapshot()
+	c := w.next()
+	if _, e := call(c); graph.ErrorCode(e) != code {
+		t.Fatalf("want %s, got %v", code, e)
+	}
+	assertBoundaryUnchanged(t, w, before)
+	return c
 }

@@ -15,6 +15,7 @@ import (
 
 var schemaOnce sync.Once
 var snapshotSchema *jsonschema.Schema
+var snapshotResourceURISchema *jsonschema.Schema
 var snapshotSchemaErr error
 
 func portableSchema() (*jsonschema.Schema, error) {
@@ -30,8 +31,23 @@ func portableSchema() (*jsonschema.Schema, error) {
 		if snapshotSchemaErr == nil {
 			snapshotSchema, snapshotSchemaErr = c.Compile("https://ns-exploration-graph.invalid/snapshot.schema.json")
 		}
+		if snapshotSchemaErr == nil {
+			snapshotResourceURISchema, snapshotSchemaErr = c.Compile("https://ns-exploration-graph.invalid/snapshot.schema.json#/$defs/resource/properties/uri")
+		}
 	})
 	return snapshotSchema, snapshotSchemaErr
+}
+
+// Host writes use the portable contract's URI validator too, so an accepted
+// reference cannot make its own exported snapshot fail format validation.
+func validateResourceURI(uri string) error {
+	if _, e := portableSchema(); e != nil {
+		return Err("storage_unavailable", "Snapshot contract could not be loaded.")
+	}
+	if e := snapshotResourceURISchema.Validate(uri); e != nil {
+		return Err("invalid_argument", "Invalid resource reference.")
+	}
+	return nil
 }
 
 // ValidateSnapshot validates shape with UUID/URI/date-time assertions before

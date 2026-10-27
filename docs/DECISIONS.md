@@ -52,3 +52,11 @@ The enforced 64 KiB cap applies to the toolkit envelope, the structured tool res
 ## 010: Identity length counts Unicode code points
 
 Host request and durable invocation identities MUST be valid UTF-8 and contain at most 200 Unicode code points. This resolves the published "200 characters" limit consistently with JSON Schema string lengths. Memory and PostgreSQL enforce the same rule; invalid identities do not reserve an idempotency key. All command, projection, snapshot, and result size budgets continue to measure serialized UTF-8 bytes rather than character counts. The conformance suite tests exactly 200 non-ASCII characters, 201 characters, and malformed UTF-8.
+
+## 011: Host resource references use the portable URI validator
+
+Host commands validate resource URIs with the same compiled URI fragment and format assertions as the portable snapshot schema. Independent `net/url.Parse` checks admitted malformed IPv6 authorities such as `http://::1/log`, producing committed data that failed snapshot validation. The shared conformance suite now rejects those writes atomically and proves valid escaped opaque URI export/restore. This decision establishes host/schema parity; it does not claim that the dependency's URI validator rejects every nonconforming RFC edge case (for example, it accepts opaque URI spaces).
+
+## 012: Contract freeze and candidate version
+
+The integrator approves normative tool contract 0.2 and snapshot schema support set `{1}` for the source-release candidate 0.2.0. Approval freezes public semantics and metadata; it does not assert that final-candidate verification or artifact sign-off has completed. Changes to released 0.2.x patch versions must preserve those public contracts. Intentional breaking changes require a recorded decision, a new minor contract/release version, migration or compatibility notes, and corresponding fixtures. No remote publication is authorized by this local release preparation.
