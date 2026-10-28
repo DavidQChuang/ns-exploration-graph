@@ -62,7 +62,7 @@ Foreign keys and indexes protect graph-local references and uniqueness. The shar
 service additionally enforces endpoint kinds, lifecycle transitions, freshness,
 cycles, and acceptance closure. Writing tables directly bypasses those rules.
 Canonical definitions are [SPEC](../spec/SPEC.md) and
-[the schema DDL](../spec/001_initial.sql).
+[the schema DDL](../graph/store/postgres/migrations/001_initial.sql).
 
 ## Understand concurrent writes and reads
 

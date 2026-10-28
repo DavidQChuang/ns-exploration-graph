@@ -1,8 +1,8 @@
 # Standalone exploration graph: implementation specification
 
-Status: normative contract v0.2 approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version), October 27, 2026. The implementation is in the current tree; `62c083f422be2f25e538724179c9fa142bd17e91` passed the Go 1.25.0 and 1.27.3 runtime matrix. Source delivery was approved after preflight inspection at `9da1e0b9e33aba4a2aef9fb79b9a85f67d76433d`; the final documentation commit will be identified by local tag `v0.2.0`. See [CLEAN-ENVIRONMENT.md](../docs/CLEAN-ENVIRONMENT.md) and [RELEASE-SIGNOFF.md](../docs/RELEASE-SIGNOFF.md).
+Status: normative contract v0.2 approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version), October 27, 2026. The implementation is in the current tree; `62c083f422be2f25e538724179c9fa142bd17e91` passed the Go 1.25.0 and 1.27.3 runtime matrix. Source delivery was approved after preflight inspection at `9da1e0b9e33aba4a2aef9fb79b9a85f67d76433d`; local tag `v0.2.0` identifies delivered source `7521239b9f109d2e39cf3aadaa5f8d5ae5b908d2`. See [CLEAN-ENVIRONMENT.md](../docs/CLEAN-ENVIRONMENT.md) and [RELEASE-ARTIFACTS.md](../docs/RELEASE-ARTIFACTS.md).
 
-Read this document for core semantics, [TOOLS.md](TOOLS.md) for agent integration, and [DEVELOPMENT-PLAN.md](DEVELOPMENT-PLAN.md) for delivery order and ownership. `snapshot.schema.json` defines snapshot shape; `tool-contracts.json` defines model-facing inputs. This document governs semantic constraints that schemas cannot express. A conflict between these documents and the schemas is a release blocker, not an invitation for an adapter to choose its own behavior.
+Read this document for core semantics, [TOOLS.md](TOOLS.md) for agent integration, and [the guide index](../docs/README.md) for implementation and operation. `snapshot.schema.json` defines snapshot shape; `tool-contracts.json` defines model-facing inputs. This document governs semantic constraints that schemas cannot express. A conflict between these documents and the schemas is a release blocker, not an invitation for an adapter to choose its own behavior.
 
 ## Locked decisions for the first implementation
 
@@ -106,7 +106,7 @@ An evidence reference is not a node that must hold a copied artifact body. Recor
 
 ## Storage contract
 
-`001_initial.sql` defines seven tables in a dedicated `exploration_graph` PostgreSQL schema:
+[`graph/store/postgres/migrations/001_initial.sql`](../graph/store/postgres/migrations/001_initial.sql) defines seven tables in a dedicated `exploration_graph` PostgreSQL schema:
 
 1. `graphs`: namespace, lifecycle, schema version, and current graph revision.
 2. `nodes`: stable identity, kind, and current node revision.
@@ -250,7 +250,7 @@ Core done means a standalone module can construct an investigation, record evide
 
 ## Delivery scope and effort
 
-The delivery gates and scope are defined in DEVELOPMENT-PLAN.md. A small ARTEX translation fixture is useful for conformance but is not a live migration. A planner, execution sandbox, full ARTEX UI, multi-tenant auth service, cross-graph inheritance, and model-generated digests are outside the portable-tool release.
+Release scope and verification gates are recorded in [the release checklist](../docs/RELEASE-CHECKLIST.md); current proposals are in [the roadmap](../docs/08-roadmap.md). A small ARTEX translation fixture is useful for conformance but is not a live migration. A planner, execution sandbox, full ARTEX UI, multi-tenant auth service, cross-graph inheritance, and model-generated digests are outside the portable-tool release.
 
 Planning range for one experienced engineer: roughly 2–4 weeks for the core milestone, then 1–2 weeks for integration kit, MCP adapter, and conformance hardening. Estimate again after the first PostgreSQL vertical slice; these are scope-based planning ranges, not measured throughput or a completion promise. A live ARTEX migration and web UI are additional milestones.
 

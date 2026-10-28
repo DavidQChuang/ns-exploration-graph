@@ -10,6 +10,8 @@ Scoped M1+M2 implementation and local source release0.2.0 are complete. Local ta
 
 Finalizer result: durable goal status complete; recovery heartbeat deleted; delivery checksums and clean Git confirmed. No recovery action remains. Treat any already-queued heartbeat as obsolete, not as authorization to restart this completed implementation.
 
+Post-release user requests added the eight-guide documentation set and pruned five superseded files. Current canonical entry points are docs/README.md, docs/maintainers/README.md, spec/SPEC.md and spec/TOOLS.md; consult those rather than historical plan/ledger/redirect filenames mentioned below. The implementation goal remains complete and no automation was rearmed.
+
 ## Historical assignments and checkpoints
 
 Final runtime verification is complete: corrected62c083f recorded195passes/zero failed or skipped tests in each native clean compiler lane, including required PostgreSQL/Python, race detection, transport parity and the patched vulnerability scan. Old sessions54818/84590 expired after completion; durable logs were inspected, and no test job is live. All implementation/review/documentation agents ended. Root is finalizing only source archives, detached inventory/checksums, local v0.2.0 tag, delivery attestations and completion of the goal/heartbeat. Do not restart implementation or test matrices without a newly demonstrated defect. Full history below is retained for auditability.

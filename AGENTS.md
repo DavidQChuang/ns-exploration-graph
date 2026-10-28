@@ -1,6 +1,6 @@
 # Implementation collaboration rules
 
-This repository implements the portable-tool release described in spec/SPEC.md, spec/TOOLS.md, and spec/DEVELOPMENT-PLAN.md. Read those contracts before changing behavior. User instructions take precedence.
+This repository implements the portable-tool release described in spec/SPEC.md and spec/TOOLS.md. Read those contracts before changing behavior; docs/README.md indexes the current guides and docs/maintainers/README.md indexes compatibility and release evidence. User instructions take precedence.
 
 - Root coordinates, integrates, audits, and commits. Delegate implementation to tiered agents. Do not spawn further agents unless the root assigns capacity.
 - Work only within your assigned paths. All agents share this checkout; do not reset, clean, stash, switch branches, or commit other agents' work. Root owns Git commits.

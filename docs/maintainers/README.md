@@ -2,13 +2,13 @@
 
 [Documentation](../README.md) · [Project](../../README.md)
 
-This index routes maintainers to the existing records in place. Normative specifications, audit evidence, release records, and historical planning are separate on purpose; this page does not supersede or reinterpret them.
+This index routes maintainers to the existing records in place. Normative specifications define behavior; release records retain approval and verification evidence; coordination logs preserve the work history.
 
 ## Consumer and operator guides
 
-- [Repository overview and quick start](../../README.md) — project scope, build, examples, roles, limits, and test commands.
+- [Repository overview and quick start](../../README.md) — project scope, quick start and guide navigation.
 - [Operations guide](../07-operations.md) — database setup boundaries, stdio invocation, environment variables, limits, troubleshooting, and recovery.
-- [Integration guide](../INTEGRATION.md) — host API setup, identity, lifecycle and evidence-resolution responsibilities.
+- [Agent guide](../01-agents.md) and [Go library guide](../02-go-library.md) — host setup, trusted identity, lifecycle and evidence-resolution responsibilities.
 - [Python consumer](../../examples/python/README.md) — second-consumer scenario and invocation details.
 - [Scripts guide](../../scripts/README.md) — local PostgreSQL helpers and release/clean-environment verification procedures.
 
@@ -22,7 +22,6 @@ This index routes maintainers to the existing records in place. Normative specif
 
 ## Release, verification, and provenance records
 
-- [Release sign-off](../RELEASE-SIGNOFF.md) — delivery approval and scope.
 - [Release artifacts](../RELEASE-ARTIFACTS.md) — local archive inventory, hashes, and inspection results.
 - [Release checklist](../RELEASE-CHECKLIST.md) — pre-delivery gates and checklist history.
 - [Release notes](../RELEASE-NOTES.md) — current release behavior and changes.
@@ -30,13 +29,11 @@ This index routes maintainers to the existing records in place. Normative specif
 - [PostgreSQL verification](../POSTGRES-VERIFICATION.md) — database correctness, measurements, and remaining performance bounds.
 - [Dependency record](../DEPENDENCIES.md) — dependency inventory and verification notes.
 - [Provenance](../PROVENANCE.md) — source and verification provenance.
-- [Requirements](../REQUIREMENTS.md) — approved requirements and acceptance evidence.
 
-## Planning and coordination history
+## Coordination history
 
-- [Development plan](../../spec/DEVELOPMENT-PLAN.md) — original milestones, gates, ownership model, and estimates; consult current release records before treating any plan item as delivered.
 - [Action log](../../ACTION_LOG.md) — chronological work and evidence log.
 - [Task tracker](../../TASKS.md) — current task coordination record.
 - [Orchestration record](../../ORCHESTRATION.md) — integration and assignment history.
 
-Do not move or delete historical or normative records to make this index shorter. Add a link here when a new record is created, and update the owning record when its status changes.
+Keep current guides, normative contracts and unique verification/provenance evidence. Remove obsolete redirects, completed planning documents and duplicate summaries when their essential facts already have a canonical home; update live references at the same time. Git history and immutable release archives retain previous versions. Add new canonical records here and update the owning record when its status changes.

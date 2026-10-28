@@ -4,6 +4,10 @@ Integrator delivery approval: 2026-10-27. Scope: the complete M1 core library an
 
 Local tag `v0.2.0` identifies source commit `7521239b9f109d2e39cf3aadaa5f8d5ae5b908d2`. Its runtime source, schemas, prompt assets, dependencies, examples and CI payload are byte-identical to clean-tested commit `62c083f422be2f25e538724179c9fa142bd17e91`; only documentation differs. Each native clean Go1.25.0/Go1.27.3 lane recorded195passing test/subtests, zero failures/skipped tests, required PostgreSQL17.11/Python3.12 and race detection. See [CLEAN-ENVIRONMENT.md](CLEAN-ENVIRONMENT.md).
 
+## Preflight inspection
+
+Before final packaging, root inspected commit `9da1e0b9e33aba4a2aef9fb79b9a85f67d76433d` and compared all 88 tracked files byte-for-byte with Git. Its preflight source archive SHA-256 was `6698a1c3442a51c4555b881d2b607e3f63bb6a97ba796c34f3dd7cc912dfc9f0`; this identifies preflight input, not a final distributable. Required source, schemas, migration, examples, license and documentation were present, with no prohibited local state, credentials or file patterns. Final tagged archive inspection is recorded below.
+
 ## Delivered artifacts
 
 Files are under `.local/releases/0.2.0/` in this repository:

@@ -23,7 +23,7 @@ import sys
 import threading
 import uuid
 
-PROTOCOL_VERSION = "2025-11-25"  # server also supports 2026-07-28; see docs/INTEGRATION.md
+PROTOCOL_VERSION = "2025-11-25"  # server also supports 2026-07-28; see docs/03-mcp.md
 MUTATING = {"graph_propose_work", "graph_record_observation", "graph_record_conclusion",
             "graph_add_support", "graph_accept_goal"}
 LOG = "fixture integer parser: malformed input rejected"

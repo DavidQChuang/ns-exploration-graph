@@ -8,7 +8,7 @@ This page summarizes what the local source release contains and separates delive
 
 Version 0.2.0 is an approved local source release. Tool contract 0.2 is approved; snapshot schema version 1 is the only supported snapshot version. The release includes the core Go library, memory and PostgreSQL stores, eight schema-validated tools, in-process and stdio MCP adapters, prompt assets, a deterministic Go scenario, and a Python standard-library consumer. It is source delivery, not a hosted product or package publication.
 
-Runtime verification passed for source revision `62c083f422be2f25e538724179c9fa142bd17e91` on Go 1.25.0 and 1.27.3. Each clean lane recorded 195 test/subtest passes, no failures or skips, with required PostgreSQL 17.11 and Python 3.12. Direct, in-process MCP, and Python stdio reports agreed. The local tag/artifact sign-off and exact archive checksums are in [RELEASE-ARTIFACTS.md](RELEASE-ARTIFACTS.md) and [RELEASE-SIGNOFF.md](RELEASE-SIGNOFF.md). Hosted GitHub Actions has not run.
+Runtime verification passed for source revision `62c083f422be2f25e538724179c9fa142bd17e91` on Go 1.25.0 and 1.27.3. Each clean lane recorded 195 test/subtest passes, no failures or skips, with required PostgreSQL 17.11 and Python 3.12. Direct, in-process MCP, and Python stdio reports agreed. The local tag/artifact sign-off and exact archive checksums are in [RELEASE-ARTIFACTS.md](RELEASE-ARTIFACTS.md). Hosted GitHub Actions has not run.
 
 ## 2. Delivered capabilities
 
@@ -32,15 +32,15 @@ The 10,000-node benchmark observations and their measurement conditions are reco
 
 These are proposals only. They are not committed release plans, promises, owners, or timelines:
 
-- A read-only viewer, originally described as optional M3 in the development plan.
+- A read-only viewer (optional M3).
 - A SQLite store for simpler local persistence.
 - Cross-graph links or queries.
 - Model-generated hot/cold summaries or graph digests that preserve exact source membership and revisions.
 - Remote serving and authentication/session isolation.
 - Bounded PostgreSQL reads, cursor design for eligible-work results, or a query strategy that avoids loading all graph rows.
 
-Each proposal needs an explicit contract, security and data-integrity review, migration/compatibility decisions where applicable, and evidence before it becomes release scope. The historical sequencing and original estimates remain in [DEVELOPMENT-PLAN.md](../spec/DEVELOPMENT-PLAN.md); this page does not turn those estimates into current schedules.
+Each proposal needs an explicit contract, security and data-integrity review, migration/compatibility decisions where applicable, and evidence before it becomes release scope. No implementation schedule is approved.
 
 ## 5. Compatibility and release records
 
-Contract compatibility policy is in [COMPATIBILITY.md](COMPATIBILITY.md). Release approval, artifact provenance, clean-environment evidence, and operational requirements remain in their existing records. Consult [the maintainer index](maintainers/README.md) for the correct record and its authority. Historical documents are retained as evidence and planning history; this summary does not replace or rewrite them.
+Contract compatibility policy is in [COMPATIBILITY.md](COMPATIBILITY.md). Release approval, artifact provenance, clean-environment evidence, and operational requirements remain in their existing records. Consult [the maintainer index](maintainers/README.md) for the correct record and its authority. The maintainer index identifies the retained canonical records.

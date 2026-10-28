@@ -19,7 +19,14 @@ Current state: complete; no implementation or verification jobs remain. ZIP/TAR.
 - [x] Inspect the requested zvec-grep reference and present an outline before writing.
 - [x] Add the documentation index and eight task-oriented numbered guides with shared navigation.
 - [x] Shorten the project README; route historical/specification/audit records through a maintainer index without moving them.
-- [x] Preserve legacy INTEGRATION.md links and documentation assertions.
+- [x] Retarget integration links and documentation assertions to the canonical guides; the temporary INTEGRATION.md redirect was retired in the subsequent cleanup.
 - [x] Check204local links/anchors, navigation consistency and balanced fences; execute the complete memory quickstart inside the checkout and from a separate consumer module.
 - [x] Compile the PostgreSQL replacement, validate eight tool inputs plus two result examples, run existing documentation/example assertions and verify schema-generator equality.
 - [x] Commit the documentation-only refresh on main. Immutable v0.2.0 tag/archives and runtime source are unchanged.
+
+## Superseded documentation cleanup
+
+- [x] Remove the obsolete integration redirect, completed development plan, duplicate requirement ledger/sign-off summary, and identical spec SQL copy.
+- [x] Keep semantic/tool contracts, canonical embedded migration and unique release/verification/provenance evidence; preserve unique preflight details in RELEASE-ARTIFACTS.md.
+- [x] Update remaining links, contract index, maintainer policy and documentation assertions. Validate226local links across34Markdown files, prompt/doc tests, schema tests and generator parity.
+- [x] Commit the cleanup. Runtime behavior and immutable release tag/archives are unchanged; deleted versions remain in Git history.

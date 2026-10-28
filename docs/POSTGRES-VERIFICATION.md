@@ -16,7 +16,7 @@ No global PATH, Windows service, or global database configuration changes. Start
 
 `graph/store/postgres` persists the seven normalized contract tables. Mutations use a SQL transaction and `SELECT ... FOR UPDATE` on the graph row. Creation inserts with `ON CONFLICT DO NOTHING` then acquires that same row lock. The shared semantic callback evaluates committed request history before preconditions. Only new immutable revisions/resources/provenance/events are inserted; dependency removal and acceptance invalidation are explicit updates. Commit completes before returning. Ordinary reads use a repeatable-read transaction and exclude graph events; the event feed is a separate bounded query.
 
-`Migrate` embeds `migrations/001_initial.sql`, copies the frozen spec DDL, and serializes first migration through a transaction advisory lock. No denormalized whole-snapshot storage table is added.
+`Migrate` embeds the canonical [initial migration](../graph/store/postgres/migrations/001_initial.sql) and serializes first migration through a transaction advisory lock. No denormalized whole-snapshot storage table is added.
 
 ## Actual test execution
 

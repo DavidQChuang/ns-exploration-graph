@@ -34,4 +34,4 @@ The graph stores evidence references but does not fetch, authorize or interpret 
 
 Ordinary reads transfer current nodes and graph edges in O(nodes + edges); mutations load graph history. Snapshot operations are whole-graph, and `ListEligibleWork` is unpaged. These are documented scale limits, not throughput promises. Model-backed smoke testing is optional and was not part of the release gate. The optional M3 viewer is outside this release.
 
-Local verification exercised the checked-in payload, not GitHub's hosted checkout/setup/upload orchestration. Final packaged artifacts will be generated and inspected locally; no package, binary or other release has been published. For the recorded integrator approval and artifact plan, see `docs/RELEASE-SIGNOFF.md`.
+Local verification exercised the checked-in payload, not GitHub's hosted checkout/setup/upload orchestration. Source archives were generated and inspected locally; no package, binary or other release has been published remotely. For integrator approval and exact delivered archive identities, see [RELEASE-ARTIFACTS.md](RELEASE-ARTIFACTS.md).

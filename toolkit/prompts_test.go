@@ -103,12 +103,12 @@ func TestPromptsAreNotEnforcement(t *testing.T) {
 	})
 }
 
-func TestIntegrationDocStatesPromptsAreNotEnforcement(t *testing.T) {
-	b, e := os.ReadFile("../docs/INTEGRATION.md")
+func TestAgentGuideStatesPromptsAreNotEnforcement(t *testing.T) {
+	b, e := os.ReadFile("../docs/01-agents.md")
 	if e != nil {
 		t.Fatal(e)
 	}
 	if !strings.Contains(string(b), "Prompts are guidance, not enforcement") {
-		t.Fatal("docs/INTEGRATION.md must state that prompts are not enforcement")
+		t.Fatal("docs/01-agents.md must state that prompts are not enforcement")
 	}
 }

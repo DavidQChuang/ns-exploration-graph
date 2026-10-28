@@ -1,6 +1,6 @@
 # Agent integration contract
 
-Normative tool contract v0.2, approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version), October 27, 2026. This is the transport-neutral contract implemented by the current toolkit, not an ARTEX or generic MCP API. Core semantics are in SPEC.md; machine-readable model inputs are in tool-contracts.json. Corrected source `62c083f422be2f25e538724179c9fa142bd17e91` passed the Go 1.25.0 and 1.27.3 runtime matrix. Local source delivery is approved; see [CLEAN-ENVIRONMENT.md](../docs/CLEAN-ENVIRONMENT.md) and [RELEASE-SIGNOFF.md](../docs/RELEASE-SIGNOFF.md).
+Normative tool contract v0.2, approved by [DECISION 012](../docs/DECISIONS.md#012-contract-freeze-and-candidate-version), October 27, 2026. This is the transport-neutral contract implemented by the current toolkit, not an ARTEX or generic MCP API. Core semantics are in SPEC.md; machine-readable model inputs are in tool-contracts.json. Corrected source `62c083f422be2f25e538724179c9fa142bd17e91` passed the Go 1.25.0 and 1.27.3 runtime matrix. Local source delivery is approved; see [CLEAN-ENVIRONMENT.md](../docs/CLEAN-ENVIRONMENT.md) and [RELEASE-ARTIFACTS.md](../docs/RELEASE-ARTIFACTS.md).
 
 ## Two interfaces, one command service
 
